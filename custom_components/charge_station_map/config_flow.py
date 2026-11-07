@@ -36,6 +36,7 @@ from .const import (
 from .station import station_display_name
 
 _LOGGER = logging.getLogger(__name__)
+ENBW_FINDER_URL = "https://www.enbw.com/elektromobilitaet/unterwegs-laden#ladestations-finder"
 
 
 def _station_option(station: dict[str, Any], distance_m: float) -> SelectOptionDict:
@@ -210,6 +211,7 @@ class EnbwChargeStationsConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema(schema),
             errors=errors,
+            description_placeholders={"enbw_finder_url": ENBW_FINDER_URL},
         )
 
     async def async_step_filter_stations(
@@ -421,4 +423,5 @@ class EnbwChargeStationsConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="reauth_confirm",
             data_schema=vol.Schema({vol.Required(API_KEY): str}),
             errors=errors,
+            description_placeholders={"enbw_finder_url": ENBW_FINDER_URL},
         )

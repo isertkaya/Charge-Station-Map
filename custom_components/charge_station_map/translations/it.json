@@ -3,7 +3,7 @@
         "step": {
             "user": {
                 "title": "Aggiungi una stazione a Charge Station Map",
-                "description": "Fornisci i dati di configurazione. La chiave API può essere letta dal [localizzatore di stazioni di ricarica EnBW](https://www.enbw.com/elektromobilitaet/unterwegs-laden#ladestations-finder) tramite l'intestazione Ocp-Apim-Subscription-Key negli strumenti per sviluppatori del browser.",
+                "description": "Fornisci i dati di configurazione. La chiave API può essere letta dal [localizzatore di stazioni di ricarica EnBW]({enbw_finder_url}) tramite l'intestazione Ocp-Apim-Subscription-Key negli strumenti per sviluppatori del browser.",
                 "data": {
                     "api_key": "Chiave API",
                     "location": "Area di ricerca"
@@ -30,7 +30,7 @@
             },
             "reauth_confirm": {
                 "title": "Autentica nuovamente Charge Station Map",
-                "description": "La chiave API è stata rifiutata. Inserisci una nuova chiave API. Puoi trovarla nel [localizzatore di stazioni di ricarica EnBW](https://www.enbw.com/elektromobilitaet/unterwegs-laden#ladestations-finder) tramite l'intestazione Ocp-Apim-Subscription-Key negli strumenti per sviluppatori del browser.",
+                "description": "La chiave API è stata rifiutata. Inserisci una nuova chiave API. Puoi trovarla nel [localizzatore di stazioni di ricarica EnBW]({enbw_finder_url}) tramite l'intestazione Ocp-Apim-Subscription-Key negli strumenti per sviluppatori del browser.",
                 "data": {
                     "api_key": "Chiave API"
                 }
@@ -105,15 +105,7 @@
         },
         "sensor": {
             "charge_point_status": {
-                "name": "Stato del punto di ricarica {index} {power} kW",
-                "state": {
-                    "AVAILABLE": "Disponibile",
-                    "OCCUPIED": "Occupato",
-                    "RESERVED": "Prenotato",
-                    "BLOCKED": "Bloccato",
-                    "OUT_OF_SERVICE": "Fuori servizio",
-                    "UNKNOWN": "Sconosciuto"
-                }
+                "name": "Stato del punto di ricarica {index} {power} kW"
             },
             "station_number": {
                 "name": "Numero stazione"

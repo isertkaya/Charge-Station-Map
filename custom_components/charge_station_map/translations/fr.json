@@ -3,7 +3,7 @@
         "step": {
             "user": {
                 "title": "Ajouter une station à Charge Station Map",
-                "description": "Indiquez les données de configuration. La clé API peut être lue depuis le [localisateur de stations de recharge EnBW](https://www.enbw.com/elektromobilitaet/unterwegs-laden#ladestations-finder) via l'en-tête Ocp-Apim-Subscription-Key dans les outils de développement de votre navigateur.",
+                "description": "Indiquez les données de configuration. La clé API peut être lue depuis le [localisateur de stations de recharge EnBW]({enbw_finder_url}) via l'en-tête Ocp-Apim-Subscription-Key dans les outils de développement de votre navigateur.",
                 "data": {
                     "api_key": "Clé API",
                     "location": "Zone de recherche"
@@ -30,7 +30,7 @@
             },
             "reauth_confirm": {
                 "title": "Ré-authentifier Charge Station Map",
-                "description": "La clé API a été rejetée. Veuillez saisir une nouvelle clé API. Vous la trouverez dans le [localisateur de stations de recharge EnBW](https://www.enbw.com/elektromobilitaet/unterwegs-laden#ladestations-finder) via l'en-tête Ocp-Apim-Subscription-Key dans les outils de développement de votre navigateur.",
+                "description": "La clé API a été rejetée. Veuillez saisir une nouvelle clé API. Vous la trouverez dans le [localisateur de stations de recharge EnBW]({enbw_finder_url}) via l'en-tête Ocp-Apim-Subscription-Key dans les outils de développement de votre navigateur.",
                 "data": {
                     "api_key": "Clé API"
                 }
@@ -105,15 +105,7 @@
         },
         "sensor": {
             "charge_point_status": {
-                "name": "État du point de charge {index} {power} kW",
-                "state": {
-                    "AVAILABLE": "Disponible",
-                    "OCCUPIED": "Occupé",
-                    "RESERVED": "Réservé",
-                    "BLOCKED": "Bloqué",
-                    "OUT_OF_SERVICE": "Hors service",
-                    "UNKNOWN": "Inconnu"
-                }
+                "name": "État du point de charge {index} {power} kW"
             },
             "station_number": {
                 "name": "Numéro de station"

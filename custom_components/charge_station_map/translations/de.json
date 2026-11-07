@@ -3,7 +3,7 @@
         "step": {
             "user": {
                 "title": "Ladestation zu Charge Station Map hinzufügen",
-                "description": "Konfigurationsdaten angeben. Den API-Schlüssel liest du im [EnBW-Ladestationsfinder](https://www.enbw.com/elektromobilitaet/unterwegs-laden#ladestations-finder) über den Header Ocp-Apim-Subscription-Key in den Entwicklertools des Browsers aus.",
+                "description": "Konfigurationsdaten angeben. Den API-Schlüssel liest du im [EnBW-Ladestationsfinder]({enbw_finder_url}) über den Header Ocp-Apim-Subscription-Key in den Entwicklertools des Browsers aus.",
                 "data": {
                     "api_key": "API-Schlüssel",
                     "location": "Suchgebiet"
@@ -30,7 +30,7 @@
             },
             "reauth_confirm": {
                 "title": "Charge Station Map erneut authentifizieren",
-                "description": "Der API-Schlüssel wurde abgelehnt. Bitte gib einen neuen API-Schlüssel ein. Du findest ihn im [EnBW-Ladestationsfinder](https://www.enbw.com/elektromobilitaet/unterwegs-laden#ladestations-finder) über den Header Ocp-Apim-Subscription-Key in den Entwicklertools des Browsers.",
+                "description": "Der API-Schlüssel wurde abgelehnt. Bitte gib einen neuen API-Schlüssel ein. Du findest ihn im [EnBW-Ladestationsfinder]({enbw_finder_url}) über den Header Ocp-Apim-Subscription-Key in den Entwicklertools des Browsers.",
                 "data": {
                     "api_key": "API-Schlüssel"
                 }
@@ -106,15 +106,7 @@
         },
         "sensor": {
             "charge_point_status": {
-                "name": "Ladepunkt {index} {power} kW Status",
-                "state": {
-                    "AVAILABLE": "Verfügbar",
-                    "OCCUPIED": "Belegt",
-                    "RESERVED": "Reserviert",
-                    "BLOCKED": "Blockiert",
-                    "OUT_OF_SERVICE": "Außer Betrieb",
-                    "UNKNOWN": "Unbekannt"
-                }
+                "name": "Ladepunkt {index} {power} kW Status"
             },
             "station_number": {
                 "name": "Stationsnummer"

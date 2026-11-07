@@ -38,6 +38,9 @@ async def test_reauth_updates_entries_with_the_same_old_key(hass):
             data=entries[0].data,
         )
         assert result["step_id"] == "reauth_confirm"
+        assert result["description_placeholders"]["enbw_finder_url"].startswith(
+            "https://www.enbw.com/"
+        )
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], {"api_key": "NEW"}
         )

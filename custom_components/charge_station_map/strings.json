@@ -3,7 +3,7 @@
         "step": {
             "user": {
                 "title": "Add station to Charge Station Map",
-                "description": "Provide configuration data. The API key can be read from the [EnBW charge station finder](https://www.enbw.com/elektromobilitaet/unterwegs-laden#ladestations-finder) via the Ocp-Apim-Subscription-Key header in your browser's developer tools.",
+                "description": "Provide configuration data. The API key can be read from the [EnBW charge station finder]({enbw_finder_url}) via the Ocp-Apim-Subscription-Key header in your browser's developer tools.",
                 "data": {
                     "api_key": "API key",
                     "location": "Search area"
@@ -30,7 +30,7 @@
             },
             "reauth_confirm": {
                 "title": "Re-authenticate Charge Station Map",
-                "description": "The API key was rejected. Please enter a new API key. You can find it in the [EnBW charge station finder](https://www.enbw.com/elektromobilitaet/unterwegs-laden#ladestations-finder) via the Ocp-Apim-Subscription-Key header in your browser's developer tools.",
+                "description": "The API key was rejected. Please enter a new API key. You can find it in the [EnBW charge station finder]({enbw_finder_url}) via the Ocp-Apim-Subscription-Key header in your browser's developer tools.",
                 "data": {
                     "api_key": "API key"
                 }
@@ -106,15 +106,7 @@
         },
         "sensor": {
             "charge_point_status": {
-                "name": "Charge point {index} {power} kW status",
-                "state": {
-                    "AVAILABLE": "Available",
-                    "OCCUPIED": "Occupied",
-                    "RESERVED": "Reserved",
-                    "BLOCKED": "Blocked",
-                    "OUT_OF_SERVICE": "Out of service",
-                    "UNKNOWN": "Unknown"
-                }
+                "name": "Charge point {index} {power} kW status"
             },
             "station_number": {
                 "name": "Station number"

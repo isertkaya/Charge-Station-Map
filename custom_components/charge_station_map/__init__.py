@@ -11,7 +11,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntry
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers import (
+    config_validation as cv,
+    device_registry as dr,
+    entity_registry as er,
+)
 
 from .const import CARD_VERSION, DOMAIN, PREVIOUS_STATION_NUMBER, STATION_NUMBER
 from .coordinator import EnbwConfigEntry, EnbwDataUpdateCoordinator
@@ -25,6 +29,7 @@ PLATFORMS: list[Platform] = [
 
 CARD_URL = "/charge_station_map/charge-station-map-card.js"
 _LOGGER = logging.getLogger(__name__)
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def _async_register_card_resource(hass: HomeAssistant) -> None:

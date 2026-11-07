@@ -73,6 +73,9 @@ async def test_first_entry_requires_key_second_reuses_it(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] == FlowResultType.FORM
+    assert result["description_placeholders"]["enbw_finder_url"].startswith(
+        "https://www.enbw.com/"
+    )
     api_key_marker = next(
         k for k in result["data_schema"].schema if str(k) == "api_key"
     )
