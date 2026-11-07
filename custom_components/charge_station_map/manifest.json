@@ -1,0 +1,14 @@
+{
+  "domain": "charge_station_map",
+  "name": "Charge Station Map",
+  "config_flow": true,
+  "dependencies": ["http", "lovelace"],
+  "documentation": "https://github.com/isertkaya/Charge-Station-Map",
+  "issue_tracker": "https://github.com/isertkaya/Charge-Station-Map/issues",
+  "codeowners": ["@isertkaya"],
+  "integration_type": "device",
+  "iot_class": "cloud_polling",
+  "loggers": ["custom_components.charge_station_map"],
+  "requirements": [],
+  "version": "3.9.0"
+}

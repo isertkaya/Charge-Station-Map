@@ -1,0 +1,150 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Ladestation zu Charge Station Map hinzufügen",
+                "description": "Konfigurationsdaten angeben. Den API-Schlüssel liest du im [EnBW-Ladestationsfinder](https://www.enbw.com/elektromobilitaet/unterwegs-laden#ladestations-finder) über den Header Ocp-Apim-Subscription-Key in den Entwicklertools des Browsers aus.",
+                "data": {
+                    "api_key": "API-Schlüssel",
+                    "location": "Suchgebiet"
+                },
+                "data_description": {
+                    "location": "Ziehe den Marker auf den Mittelpunkt des Suchgebiets und stelle über den Radius-Anfasser ein, wie weit im Umkreis nach Ladestationen gesucht wird."
+                }
+            },
+            "search_station": {
+                "title": "Ladestation auswählen",
+                "description": "Wähle die hinzuzufügende Station aus der Liste unten aus.",
+                "data": {
+                    "station_number": "Station"
+                }
+            },
+            "reconfigure": {
+                "title": "Ladestation in Charge Station Map neu konfigurieren",
+                "description": "Aktualisiere die Konfiguration dieser Ladestation.",
+                "data": {
+                    "name": "Anzeigename",
+                    "station_number": "Stationsnummer",
+                    "api_key": "API-Schlüssel"
+                }
+            },
+            "reauth_confirm": {
+                "title": "Charge Station Map erneut authentifizieren",
+                "description": "Der API-Schlüssel wurde abgelehnt. Bitte gib einen neuen API-Schlüssel ein. Du findest ihn im [EnBW-Ladestationsfinder](https://www.enbw.com/elektromobilitaet/unterwegs-laden#ladestations-finder) über den Header Ocp-Apim-Subscription-Key in den Entwicklertools des Browsers.",
+                "data": {
+                    "api_key": "API-Schlüssel"
+                }
+            },
+            "filter_stations": {
+                "title": "Ladestationen filtern",
+                "description": "Wähle bei Bedarf Betreiber und Steckertypen aus den gefundenen Stationen aus und fahre dann fort.",
+                "data": {
+                    "operator_filter": "Betreiber",
+                    "plug_types_filter": "Steckertypen",
+                    "min_power_in_kw": "Mindestladeleistung (kW)"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Verbindung zur EnBW-API fehlgeschlagen. Bitte erneut versuchen.",
+            "invalid_auth": "Ungültiger API-Schlüssel.",
+            "no_stations_found": "In der Nähe des angegebenen Standorts wurden keine Ladestationen gefunden.",
+            "no_filter_matches": "Keine Station entspricht diesen Filtern. Passe die Filter oder das Suchgebiet an.",
+            "already_configured": "Diese Ladestation ist bereits konfiguriert."
+        },
+        "abort": {
+            "already_configured": "Diese Ladestation ist bereits konfiguriert.",
+            "reconfigure_successful": "Neukonfiguration war erfolgreich.",
+            "reauth_successful": "Erneute Authentifizierung war erfolgreich."
+        }
+    },
+    "exceptions": {
+        "cannot_connect": {
+            "message": "Verbindung zur EnBW-API fehlgeschlagen."
+        },
+        "invalid_auth": {
+            "message": "Der API-Schlüssel wurde von der EnBW-API abgelehnt."
+        }
+    },
+    "entity": {
+        "binary_sensor": {
+            "charge_station": {
+                "name": "Verfügbarkeit",
+                "state": {
+                    "off": "Nicht verfügbar",
+                    "on": "Verfügbar"
+                }
+            },
+            "charge_point": {
+                "name": "Ladepunkt {index} {power} kW",
+                "state": {
+                    "off": "Frei",
+                    "on": "Belegt"
+                }
+            },
+            "station_open": {
+                "name": "Jetzt geöffnet",
+                "state": {
+                    "off": "Geschlossen",
+                    "on": "Geöffnet"
+                }
+            },
+            "always_open": {
+                "name": "Durchgehend geöffnet",
+                "state": {
+                    "off": "Nein",
+                    "on": "Ja"
+                }
+            },
+            "closed_on_holidays": {
+                "name": "An Feiertagen geschlossen",
+                "state": {
+                    "off": "Nein",
+                    "on": "Ja"
+                }
+            }
+        },
+        "sensor": {
+            "charge_point_status": {
+                "name": "Ladepunkt {index} {power} kW Status",
+                "state": {
+                    "AVAILABLE": "Verfügbar",
+                    "OCCUPIED": "Belegt",
+                    "RESERVED": "Reserviert",
+                    "BLOCKED": "Blockiert",
+                    "OUT_OF_SERVICE": "Außer Betrieb",
+                    "UNKNOWN": "Unbekannt"
+                }
+            },
+            "station_number": {
+                "name": "Stationsnummer"
+            },
+            "total_charge_points": {
+                "name": "Ladepunkte gesamt"
+            },
+            "available_charge_points": {
+                "name": "Verfügbare Ladepunkte"
+            },
+            "unknown_state_charge_points": {
+                "name": "Ladepunkte mit unbekanntem Status"
+            },
+            "opening_hours": {
+                "name": "Öffnungszeiten"
+            },
+            "next_opening_time": {
+                "name": "Nächste Öffnung"
+            },
+            "next_closing_time": {
+                "name": "Nächste Schließung"
+            },
+            "operator": {
+                "name": "Betreiber"
+            }
+        },
+        "device_tracker": {
+            "location": {
+                "name": "Standort"
+            }
+        }
+    }
+}

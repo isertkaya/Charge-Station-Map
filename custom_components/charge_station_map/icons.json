@@ -1,0 +1,46 @@
+{
+    "entity": {
+        "binary_sensor": {
+            "always_open": {
+                "default": "mdi:clock-time-eight-outline"
+            },
+            "closed_on_holidays": {
+                "default": "mdi:calendar-remove"
+            }
+        },
+        "sensor": {
+            "charge_point_status": {
+                "default": "mdi:ev-station"
+            },
+            "operator": {
+                "default": "mdi:domain"
+            },
+            "station_number": {
+                "default": "mdi:identifier"
+            },
+            "total_charge_points": {
+                "default": "mdi:ev-station"
+            },
+            "available_charge_points": {
+                "default": "mdi:ev-station"
+            },
+            "unknown_state_charge_points": {
+                "default": "mdi:ev-station"
+            },
+            "opening_hours": {
+                "default": "mdi:clock-outline"
+            },
+            "next_opening_time": {
+                "default": "mdi:door-open"
+            },
+            "next_closing_time": {
+                "default": "mdi:door-closed"
+            }
+        },
+        "device_tracker": {
+            "location": {
+                "default": "mdi:ev-station"
+            }
+        }
+    }
+}

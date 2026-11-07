@@ -1,0 +1,149 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Ajouter une station à Charge Station Map",
+                "description": "Indiquez les données de configuration. La clé API peut être lue depuis le [localisateur de stations de recharge EnBW](https://www.enbw.com/elektromobilitaet/unterwegs-laden#ladestations-finder) via l'en-tête Ocp-Apim-Subscription-Key dans les outils de développement de votre navigateur.",
+                "data": {
+                    "api_key": "Clé API",
+                    "location": "Zone de recherche"
+                },
+                "data_description": {
+                    "location": "Faites glisser le repère au centre de la zone à rechercher et utilisez la poignée de rayon pour définir la distance de recherche des stations de recharge."
+                }
+            },
+            "search_station": {
+                "title": "Sélectionner la station de recharge",
+                "description": "Sélectionnez la station que vous souhaitez ajouter dans la liste ci-dessous.",
+                "data": {
+                    "station_number": "Station"
+                }
+            },
+            "reconfigure": {
+                "title": "Reconfigurer une station dans Charge Station Map",
+                "description": "Mettez à jour la configuration de cette station de recharge.",
+                "data": {
+                    "name": "Nom d'affichage",
+                    "station_number": "Numéro de station",
+                    "api_key": "Clé API"
+                }
+            },
+            "reauth_confirm": {
+                "title": "Ré-authentifier Charge Station Map",
+                "description": "La clé API a été rejetée. Veuillez saisir une nouvelle clé API. Vous la trouverez dans le [localisateur de stations de recharge EnBW](https://www.enbw.com/elektromobilitaet/unterwegs-laden#ladestations-finder) via l'en-tête Ocp-Apim-Subscription-Key dans les outils de développement de votre navigateur.",
+                "data": {
+                    "api_key": "Clé API"
+                }
+            },
+            "filter_stations": {
+                "title": "Filtrer les stations de recharge",
+                "description": "Sélectionnez des filtres facultatifs parmi les stations trouvées, puis continuez.",
+                "data": {
+                    "operator_filter": "Opérateurs",
+                    "plug_types_filter": "Types de prises",
+                    "min_power_in_kw": "Puissance minimale (kW)"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Échec de la connexion à l'API EnBW. Veuillez réessayer.",
+            "invalid_auth": "Clé API invalide.",
+            "no_stations_found": "Aucune station de recharge n'a été trouvée près de l'emplacement indiqué.",
+            "no_filter_matches": "Aucune station ne correspond à ces filtres. Modifiez les filtres ou la zone de recherche."
+        },
+        "abort": {
+            "already_configured": "Cette station de recharge est déjà configurée.",
+            "reconfigure_successful": "La reconfiguration a réussi.",
+            "reauth_successful": "La ré-authentification a réussi."
+        }
+    },
+    "exceptions": {
+        "cannot_connect": {
+            "message": "Échec de la connexion à l'API EnBW."
+        },
+        "invalid_auth": {
+            "message": "La clé API a été rejetée par l'API EnBW."
+        }
+    },
+    "entity": {
+        "binary_sensor": {
+            "charge_station": {
+                "name": "Disponibilité",
+                "state": {
+                    "off": "Indisponible",
+                    "on": "Disponible"
+                }
+            },
+            "charge_point": {
+                "name": "Point de charge {index} {power} kW",
+                "state": {
+                    "off": "Libre",
+                    "on": "Occupé"
+                }
+            },
+            "station_open": {
+                "name": "Ouverte actuellement",
+                "state": {
+                    "off": "Fermée",
+                    "on": "Ouverte"
+                }
+            },
+            "always_open": {
+                "name": "Ouverte 24h/24 et 7j/7",
+                "state": {
+                    "off": "Non",
+                    "on": "Oui"
+                }
+            },
+            "closed_on_holidays": {
+                "name": "Fermée les jours fériés",
+                "state": {
+                    "off": "Non",
+                    "on": "Oui"
+                }
+            }
+        },
+        "sensor": {
+            "charge_point_status": {
+                "name": "État du point de charge {index} {power} kW",
+                "state": {
+                    "AVAILABLE": "Disponible",
+                    "OCCUPIED": "Occupé",
+                    "RESERVED": "Réservé",
+                    "BLOCKED": "Bloqué",
+                    "OUT_OF_SERVICE": "Hors service",
+                    "UNKNOWN": "Inconnu"
+                }
+            },
+            "station_number": {
+                "name": "Numéro de station"
+            },
+            "total_charge_points": {
+                "name": "Points de charge au total"
+            },
+            "available_charge_points": {
+                "name": "Points de charge disponibles"
+            },
+            "unknown_state_charge_points": {
+                "name": "Points de charge à l'état inconnu"
+            },
+            "opening_hours": {
+                "name": "Horaires d'ouverture"
+            },
+            "next_opening_time": {
+                "name": "Prochaine ouverture"
+            },
+            "next_closing_time": {
+                "name": "Prochaine fermeture"
+            },
+            "operator": {
+                "name": "Opérateur"
+            }
+        },
+        "device_tracker": {
+            "location": {
+                "name": "Emplacement"
+            }
+        }
+    }
+}
