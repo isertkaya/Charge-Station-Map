@@ -2,6 +2,7 @@
 const CARD_TYPES = [
   ["charge-station-map-compact-card", "Charge Station Map · Kompakt"],
   ["charge-station-map-detail-card", "Charge Station Map · Details"],
+  ["charge-station-map-chips-card", "Charge Station Map · Chips"],
 ];
 
 const TEXT = {
@@ -19,6 +20,7 @@ const TEXT = {
     operator: "Betreiber unbekannt",
     station: "Ladestation",
     free: "frei",
+    maxPower: "Maximale Ladeleistung",
     plugUnknown: "Stecker unbekannt",
     details: "Details in Home Assistant",
     cable: "Kabel vorhanden",
@@ -63,6 +65,7 @@ const TEXT = {
     operator: "Unknown operator",
     station: "Charge station",
     free: "free",
+    maxPower: "Maximum power",
     plugUnknown: "Plug unknown",
     details: "Details in Home Assistant",
     cable: "Cable attached",
@@ -137,6 +140,10 @@ const STYLE = `
   .point-name { font-weight: 700; font-size: .91rem; overflow-wrap: anywhere; }
   .point-id { color: var(--csm-muted); font-size: .72rem; overflow-wrap: anywhere; }
   .point-meta { margin-top: 4px; color: var(--csm-muted); font-size: .78rem; overflow-wrap: anywhere; }
+  .point-title { display: flex; align-items: center; flex-wrap: wrap; gap: 5px 9px; }
+  .power-badge { display: inline-flex; align-items: baseline; gap: 3px; padding: 3px 7px; border-radius: 9px; color: var(--primary-text-color); background: color-mix(in srgb, var(--primary-color, #03a9f4) 15%, var(--card-background-color, #fff)); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .power-badge strong { font-size: .9rem; font-weight: 750; line-height: 1; }
+  .power-badge small { font-size: .67rem; font-weight: 700; }
   .point-status { display: inline-flex; gap: 6px; align-items: center; font-size: .83rem; font-weight: 650; white-space: nowrap; }
   .dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--state-color); }
   .age, .exact-time { color: var(--csm-muted); font-size: .74rem; }
@@ -165,9 +172,27 @@ const STYLE = `
   .connector-chip { display: inline-flex; gap: 6px; align-items: center; padding: 4px 8px 4px 4px; border-radius: 18px; background: var(--card-background-color, #fff); font-size: .75rem; }
   .connector-chip .plug-bubble { width: 25px; height: 25px; }
   .connector-chip ha-icon { --mdc-icon-size: 17px; --ha-icon-size: 17px; width: 17px; height: 17px; }
+  .connector-chip .power-badge { padding: 3px 5px; }
+  .connector-chip .cable-label { color: var(--csm-muted); }
   .detail .point-bottom { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; margin-top: 15px; padding-top: 10px; border-top: 1px solid var(--divider-color, #ddd); }
   .detail .exact-time { margin-top: 2px; }
   .open-cue { color: var(--csm-muted); font-size: 1rem; }
+  .chips .body { padding: 16px; }
+  .chips .station-bubble { width: 40px; height: 40px; }
+  .chips .count { min-width: 74px; padding: 8px 10px; border-radius: 20px; background: color-mix(in srgb, var(--csm-free) 15%, var(--card-background-color, #fff)); }
+  .chips .count strong { color: var(--csm-free); font-size: 1.25rem; }
+  .chips .point-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 8px; margin-top: 14px; }
+  .chips .point { border-radius: 16px; background: var(--secondary-background-color, rgba(127,127,127,.08)); box-shadow: inset 3px 0 var(--state-color); }
+  .chips .point-action { display: block; min-height: 104px; padding: 11px 12px; background: transparent; }
+  .chips .chip-top, .chips .chip-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .chips .chip-top { margin-bottom: 10px; }
+  .chips .plug-icons { max-width: none; }
+  .chips .plug-bubble { width: 29px; height: 29px; }
+  .chips .plug-bubble ha-icon { --mdc-icon-size: 17px; --ha-icon-size: 17px; width: 17px; height: 17px; }
+  .chips .power-badge strong { font-size: 1.08rem; }
+  .chips .chip-name { margin-top: 2px; color: var(--csm-muted); font-size: .72rem; }
+  .chips .point-status { white-space: normal; font-size: .78rem; }
+  .chips .age { white-space: nowrap; }
   @media (max-width: 360px) {
     .body, .detail .body { padding: 14px; }
     .hero { gap: 8px; }
@@ -252,11 +277,20 @@ function count(value) {
   return Number.isFinite(number) && number >= 0 ? String(number) : "—";
 }
 
-function powerLabel(point) {
+function powerValue(point) {
   const powers = Array.isArray(point.attributes?.maxPowerInKw)
     ? point.attributes.maxPowerInKw.filter((value) => typeof value === "number" && Number.isFinite(value))
     : [];
-  return powers.length ? `${Math.max(...powers)} kW` : "";
+  return powers.length ? Math.max(...powers) : null;
+}
+
+function powerBadge(power, locale) {
+  if (typeof power !== "number" || !Number.isFinite(power)) return null;
+  const badge = element("span", "power-badge");
+  const formatted = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(power);
+  badge.setAttribute("aria-label", `${formatted} kW`);
+  badge.append(element("strong", "", formatted), element("small", "", "kW"));
+  return badge;
 }
 
 function connectorsOf(point) {
@@ -312,6 +346,10 @@ function visible(config, option) {
   return config?.[option] !== false;
 }
 
+function showStatusStrip(config, chips) {
+  return chips ? config?.show_status_strip === true : visible(config, "show_status_strip");
+}
+
 class ChargeStationMapCard extends HTMLElement {
   constructor() {
     super();
@@ -326,6 +364,7 @@ class ChargeStationMapCard extends HTMLElement {
   static getConfigElement() {
     const editor = document.createElement("charge-station-map-card-editor");
     editor.detailed = this === ChargeStationMapDetailCard;
+    editor.chips = this === ChargeStationMapChipsCard;
     return editor;
   }
 
@@ -353,7 +392,9 @@ class ChargeStationMapCard extends HTMLElement {
     const height = this.shadowRoot.querySelector("ha-card")?.getBoundingClientRect?.().height;
     if (height > 0) return Math.ceil(height / 50);
     const points = pointStates(this._hass, this._config?.entity).length;
-    return this._detailed ? 4 + points * 3 : 3 + points;
+    if (this._detailed) return 4 + points * 3;
+    if (this._chips) return 3 + Math.ceil(points / 2) * 2;
+    return 3 + points;
   }
 
   getGridOptions() {
@@ -392,7 +433,7 @@ class ChargeStationMapCard extends HTMLElement {
     this._signature = signature;
 
     const card = this.shadowRoot.querySelector("ha-card");
-    card.className = this._detailed ? "detail" : "compact";
+    card.className = this._detailed ? "detail" : this._chips ? "chips" : "compact";
     const body = this.shadowRoot.querySelector(".body");
     body.replaceChildren();
     if (!this._config.entity) {
@@ -460,7 +501,7 @@ class ChargeStationMapCard extends HTMLElement {
       body.append(element("div", "notice", strings.closed));
     }
 
-    if (points.length > 0 && visible(this._config, "show_status_strip")) {
+    if (points.length > 0 && showStatusStrip(this._config, this._chips)) {
       const rail = element("div", "status-rail");
       rail.setAttribute("aria-label", strings.points);
       for (const point of points) {
@@ -474,7 +515,7 @@ class ChargeStationMapCard extends HTMLElement {
       body.append(rail);
     }
 
-    if (this._detailed && points.length > 0 && visible(this._config, "show_status_strip")) {
+    if (this._detailed && points.length > 0 && showStatusStrip(this._config, this._chips)) {
       const legend = element("div", "legend");
       const statuses = new Map();
       for (const point of points) {
@@ -497,11 +538,13 @@ class ChargeStationMapCard extends HTMLElement {
       const id = String(point.attributes.evseId);
       const shortId = id.split("*").at(-1);
       const entries = plugEntries(point, strings);
+      const maxPower = powerValue(point);
       const row = element("div", `point ${point.state.toLowerCase()}`);
       const action = element("button", "point-action");
       action.type = "button";
       action.title = strings.details;
-      action.setAttribute("aria-label", `${strings.point} ${shortId}: ${statusText(hass, point, strings)}. ${plugNames(point, strings)}. ${strings.details}`);
+      const powerInfo = maxPower === null ? "" : ` ${strings.maxPower}: ${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(maxPower)} kW.`;
+      action.setAttribute("aria-label", `${strings.point} ${shortId}: ${statusText(hass, point, strings)}. ${plugNames(point, strings)}.${powerInfo} ${strings.details}`);
       action.addEventListener("click", () => this._activate(point.entity_id));
       const statusNode = element("div", "point-status");
       statusNode.append(element("span", "dot"), element("span", "", statusText(hass, point, strings)));
@@ -509,7 +552,25 @@ class ChargeStationMapCard extends HTMLElement {
       const relative = relativeTime(updatedAt, locale);
       const exact = exactTime(updatedAt, locale, hass.config?.time_zone);
       const time = point.state === "unavailable" || point.state === "unknown" ? null : exact;
-      if (this._detailed) {
+      if (this._chips) {
+        const icons = element("div", "plug-icons");
+        for (const entry of entries.filter((entry, index, all) => all.findIndex((other) => other.name === entry.name) === index)) {
+          icons.append(plugBubble(entry));
+        }
+        const top = element("div", "chip-top");
+        top.append(icons);
+        if (visible(this._config, "show_power")) {
+          const badge = powerBadge(maxPower, locale);
+          if (badge) top.append(badge);
+        }
+        const bottom = element("div", "chip-bottom");
+        bottom.append(statusNode);
+        if (visible(this._config, "show_status_time")) {
+          bottom.append(element("span", "age", time ? (relative || `${strings.since} ${time}`) : strings.noTime));
+        }
+        const plugLabel = this._config.plug_style === "icon_only" ? "" : ` · ${plugNames(point, strings)}`;
+        action.append(top, bottom, element("div", "chip-name", `${shortId}${plugLabel}`));
+      } else if (this._detailed) {
         const top = element("div", "point-top");
         const heading = element("div");
         heading.append(element("div", "point-name", shortId));
@@ -521,12 +582,17 @@ class ChargeStationMapCard extends HTMLElement {
           const chip = element("span", "connector-chip");
           chip.title = entry.name;
           chip.append(plugBubble(entry));
-          const parts = [];
-          if (this._config.plug_style !== "icon_only") parts.push(entry.name);
-          if (visible(this._config, "show_power") && typeof entry.power === "number") parts.push(`${entry.power} kW`);
-          if (visible(this._config, "show_cable") && entry.cable === true) parts.push(strings.cable);
-          if (visible(this._config, "show_cable") && entry.cable === false) parts.push(strings.noCable);
-          if (parts.length) chip.append(element("span", "", parts.join(" · ")));
+          if (this._config.plug_style !== "icon_only") chip.append(element("span", "", entry.name));
+          if (visible(this._config, "show_power")) {
+            const badge = powerBadge(entry.power, locale);
+            if (badge) chip.append(badge);
+          }
+          if (visible(this._config, "show_cable") && entry.cable === true) {
+            chip.append(element("span", "cable-label", strings.cable));
+          }
+          if (visible(this._config, "show_cable") && entry.cable === false) {
+            chip.append(element("span", "cable-label", strings.noCable));
+          }
           connectorList.append(chip);
         }
         action.append(connectorList);
@@ -544,13 +610,16 @@ class ChargeStationMapCard extends HTMLElement {
           icons.append(plugBubble(entry));
         }
         const main = element("div", "point-main");
-        main.append(element("div", "point-name", shortId));
-        const power = powerLabel(point);
-        const meta = [
-          this._config.plug_style === "icon_only" ? "" : plugNames(point, strings),
-          visible(this._config, "show_power") ? power : "",
-        ].filter(Boolean).join(" · ");
-        if (meta) main.append(element("div", "point-meta", meta));
+        const titleLine = element("div", "point-title");
+        titleLine.append(element("span", "point-name", shortId));
+        if (visible(this._config, "show_power")) {
+          const badge = powerBadge(maxPower, locale);
+          if (badge) titleLine.append(badge);
+        }
+        main.append(titleLine);
+        if (this._config.plug_style !== "icon_only") {
+          main.append(element("div", "point-meta", plugNames(point, strings)));
+        }
         const side = element("div", "point-side");
         side.append(statusNode);
         if (visible(this._config, "show_status_time")) {
@@ -571,6 +640,10 @@ class ChargeStationMapCompactCard extends ChargeStationMapCard {
 
 class ChargeStationMapDetailCard extends ChargeStationMapCard {
   _detailed = true;
+}
+
+class ChargeStationMapChipsCard extends ChargeStationMapCard {
+  _chips = true;
 }
 
 class ChargeStationMapCardEditor extends HTMLElement {
@@ -670,7 +743,8 @@ class ChargeStationMapCardEditor extends HTMLElement {
       const checkLabel = element("label", "check", caption);
       const input = element("input");
       input.type = "checkbox";
-      input.checked = visible(this._config, key);
+      input.checked = key === "show_status_strip" && this.chips
+        ? this._config.show_status_strip === true : visible(this._config, key);
       input.addEventListener("change", () => this._changed({ [key]: input.checked }));
       checkLabel.prepend(input);
       settings.append(checkLabel);
@@ -732,7 +806,8 @@ class ChargeStationMapCardEditor extends HTMLElement {
 }
 
 for (const [type, name] of CARD_TYPES) {
-  const cardClass = type.includes("compact") ? ChargeStationMapCompactCard : ChargeStationMapDetailCard;
+  const cardClass = type.includes("compact") ? ChargeStationMapCompactCard
+    : type.includes("chips") ? ChargeStationMapChipsCard : ChargeStationMapDetailCard;
   if (!customElements.get(type)) customElements.define(type, cardClass);
   window.customCards = window.customCards || [];
   if (!window.customCards.some((card) => card.type === type)) {
@@ -741,7 +816,9 @@ for (const [type, name] of CARD_TYPES) {
       name,
       description: type.includes("compact")
         ? "Kompakte Stationsübersicht mit Steckertypen und allen Ladepunkten"
-        : "Ladepunktfelder mit allen Anschlüssen und genauen Statuszeiten",
+        : type.includes("chips")
+          ? "Schlanke, antippbare Ladepunkt-Kacheln im Mushroom-Stil"
+          : "Ladepunktfelder mit allen Anschlüssen und genauen Statuszeiten",
       preview: true,
       getEntitySuggestion: (hass, entityId) =>
         isStation(hass.states?.[entityId])

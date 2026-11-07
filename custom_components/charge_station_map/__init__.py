@@ -33,7 +33,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def _async_register_card_resource(hass: HomeAssistant) -> None:
-    """Make both cards available in the dashboard picker without manual setup."""
+    """Make the dashboard cards available in the picker without manual setup."""
     lovelace = hass.data.get(LOVELACE_DOMAIN)
     if lovelace is None:
         _LOGGER.warning("Lovelace is unavailable; cannot register the dashboard cards")
@@ -67,7 +67,7 @@ async def _async_register_card_resource(hass: HomeAssistant) -> None:
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Serve and register the two dashboard cards."""
+    """Serve and register the dashboard cards."""
     card_file = Path(__file__).parent / "www" / "charge-station-map-card.js"
     await hass.http.async_register_static_paths(
         [StaticPathConfig(CARD_URL, str(card_file), cache_headers=False)]

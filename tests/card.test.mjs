@@ -160,9 +160,9 @@ function hassFixture() {
   };
 }
 
-test("both cards find renamed point entities on the selected station only", () => {
+test("all cards find renamed point entities on the selected station only", () => {
   const hass = hassFixture();
-  for (const type of ["charge-station-map-compact-card", "charge-station-map-detail-card"]) {
+  for (const type of ["charge-station-map-compact-card", "charge-station-map-detail-card", "charge-station-map-chips-card"]) {
     const Card = registered.get(type);
     assert.ok(Card);
     const card = new Card();
@@ -182,6 +182,7 @@ test("both cards find renamed point entities on the selected station only", () =
     const icons = findTags(card.shadowRoot.body, "ha-icon").map((icon) => icon.attributes.icon);
     assert.ok(icons.includes("mdi:ev-plug-type2"));
     assert.ok(icons.includes("mdi:ev-plug-ccs2"));
+    assert.ok(findAll(card.shadowRoot.body, "power-badge").length >= 2);
     assert.doesNotMatch(rendered, /EP000001|Blockiert/);
     if (type.includes("detail")) {
       assert.match(rendered, /Quettinger Str\. 106/);
@@ -221,12 +222,41 @@ test("detail card shows every connector and opens the selected entity", () => {
   card.setConfig({ entity: "binary_sensor.station_renamed" });
   card.hass = hassFixture();
   assert.equal(findAll(card.shadowRoot.body, "point-action").length, 2);
-  assert.match(textOf(card.shadowRoot.body), /CCS · 150 kW · Kabel vorhanden/);
-  assert.match(textOf(card.shadowRoot.body), /CHAdeMO · 50 kW · Kabel vorhanden/);
+  assert.match(textOf(card.shadowRoot.body), /CCS\s+150 kW Kabel vorhanden/);
+  assert.match(textOf(card.shadowRoot.body), /CHAdeMO\s+50 kW Kabel vorhanden/);
   findAll(card.shadowRoot.body, "point-action")[1].click();
   assert.equal(card.events.at(-1).detail.config.entity, "sensor.custom_point_name_2");
   findAll(card.shadowRoot.body, "rail-segment")[0].click();
   assert.equal(card.events.at(-1).detail.config.entity, "sensor.custom_point_name_1");
+});
+
+test("chips card shows each point as a clickable tile and can show the status strip", () => {
+  const Card = registered.get("charge-station-map-chips-card");
+  const card = new Card();
+  card.setConfig({ entity: "binary_sensor.station_renamed" });
+  card.hass = hassFixture();
+  assert.equal(findAll(card.shadowRoot.body, "point-action").length, 2);
+  assert.equal(findAll(card.shadowRoot.body, "rail-segment").length, 0);
+  assert.match(textOf(card.shadowRoot.body), /150 kW/);
+  assert.match(textOf(card.shadowRoot.body), /Belegt/);
+  findAll(card.shadowRoot.body, "point-action")[1].click();
+  assert.equal(card.events.at(-1).detail.config.entity, "sensor.custom_point_name_2");
+  card.setConfig({ entity: "binary_sensor.station_renamed", show_status_strip: true, show_power: false });
+  assert.equal(findAll(card.shadowRoot.body, "rail-segment").length, 2);
+  assert.equal(findAll(card.shadowRoot.body, "power-badge").length, 0);
+});
+
+test("power badge and accessible label format fractional kW for the Home Assistant language", () => {
+  const hass = hassFixture();
+  const point = hass.states["sensor.custom_point_name_1"];
+  point.attributes.maxPowerInKw = [11.5];
+  point.attributes.connectors[0].maxPowerInKw = 11.5;
+  const Card = registered.get("charge-station-map-compact-card");
+  const card = new Card();
+  card.setConfig({ entity: "binary_sensor.station_renamed" });
+  card.hass = hass;
+  assert.equal(findAll(card.shadowRoot.body, "power-badge")[0].attributes["aria-label"], "11,5 kW");
+  assert.match(findAll(card.shadowRoot.body, "point-action")[0].attributes["aria-label"], /Maximale Ladeleistung: 11,5 kW/);
 });
 
 test("display options and Home Assistant tap action are respected", () => {
@@ -257,7 +287,7 @@ test("display options and Home Assistant tap action are respected", () => {
   });
 });
 
-test("compact card never hides extra charge points", () => {
+test("compact and chips cards never hide extra charge points", () => {
   const hass = hassFixture();
   for (let index = 3; index <= 6; index += 1) {
     const entityId = `sensor.extra_point_${index}`;
@@ -274,13 +304,14 @@ test("compact card never hides extra charge points", () => {
     };
     hass.entities[entityId] = { device_id: "station-a" };
   }
-  const Card = registered.get("charge-station-map-compact-card");
-  const card = new Card();
-  card.setConfig({ entity: "binary_sensor.station_renamed" });
-  card.hass = hass;
-  assert.equal(findAll(card.shadowRoot.body, "point-action").length, 6);
-  assert.equal(findAll(card.shadowRoot.body, "rail-segment").length, 6);
-  assert.match(textOf(card.shadowRoot.body), /EP001946/);
+  for (const type of ["charge-station-map-compact-card", "charge-station-map-chips-card"]) {
+    const Card = registered.get(type);
+    const card = new Card();
+    card.setConfig({ entity: "binary_sensor.station_renamed" });
+    card.hass = hass;
+    assert.equal(findAll(card.shadowRoot.body, "point-action").length, 6);
+    assert.match(textOf(card.shadowRoot.body), /EP001946/);
+  }
 });
 
 test("visual editor exposes card settings and saves a display change", () => {

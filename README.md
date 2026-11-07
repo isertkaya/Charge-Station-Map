@@ -68,7 +68,7 @@ needed.
 
 Follow any restart prompt shown after installation or an update. Then open
 **Settings → Devices & Services → Add integration** and search for **Charge
-Station Map**. The two dashboard cards are registered automatically when the
+Station Map**. The dashboard cards are registered automatically when the
 integration is set up.
 
 [![Start setting up Charge Station Map in Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=charge_station_map)
@@ -94,36 +94,40 @@ new station's EVSE IDs.
 
 ## Dashboard cards
 
+![Charge Station Map Chips card with three example charge points](docs/images/chips-card.png)
+
 | Compact | Detailed |
 | --- | --- |
 | ![Charge Station Map compact card with three example charge points](docs/images/compact-card.png) | ![Charge Station Map detailed card with three example charge points](docs/images/detail-card.png) |
 
 These previews use example station data and the Home Assistant dark theme.
 
-The integration includes **Charge Station Map · Kompakt** and **Charge Station
-Map · Details**. Both cards find and show **all** charge points of the selected
-station automatically, including points added later. The compact card is a
-station overview with a status strip and one short row per charge point. Each
-row shows the EVSE ID suffix, plug type icons, maximum power, status and relative
-status age. The detailed card uses a free-point gauge and individual charge
-point tiles with every connector's icon, plug type, power and cable information,
-plus the full EVSE ID and exact status time. Tap the station, a charge point or
-its segment in the status strip to open its Home Assistant details. The time
-comes from the API's `updatedAt` field; if the API does not provide one, the
-card says that the time is unknown.
+The integration includes **Charge Station Map · Chips**, **Charge Station Map ·
+Kompakt**, and **Charge Station Map · Details**. All three find and show **all**
+charge points of the selected station automatically, including points added
+later. Chips uses a compact, responsive grid of tappable point tiles with plug
+icons, prominent maximum power, status and time in that status. Kompakt shows
+one short row per point plus a status strip. Details uses a free-point gauge
+and shows every connector's plug type, individual power and cable information,
+plus the full EVSE ID and exact status time. Tap the station or a charge point
+to open its Home Assistant details; the status strip is also tappable. Status
+times come from the API's `updatedAt` field; if the API does not provide one,
+the cards say that the time is unknown.
 
-Both cards follow the active Home Assistant theme and use rounded, Mushroom-like
+All cards follow the active Home Assistant theme and use rounded, Mushroom-like
 icon bubbles. In the visual card editor, choose the station and customize the
 heading, address, status strip, power, status time, plug labels and tap action.
-The detailed card also lets you show or hide cable information. The default
-tap action opens Home Assistant details; the editor also supports no action or
+The status strip is off by default in Chips to keep it short. The detailed card
+also lets you show or hide cable information. The default tap action opens Home
+Assistant details; the editor also supports no action or
 navigation to a dashboard page. Standard Home Assistant `tap_action` settings
 can be set in YAML.
 
 With the usual Home Assistant dashboard settings, the integration registers
 its card resource automatically. After restarting Home Assistant and reloading
-the browser page, choose **Charge Station Map · Kompakt** or **Charge Station
-Map · Details** in the dashboard card picker and select the station. The
+the browser page, choose **Charge Station Map · Chips**, **Charge Station Map ·
+Kompakt**, or **Charge Station Map · Details** in the dashboard card picker and
+select the station. The
 selector lists station availability entities. You can also add one from a
 station entity's suggested cards. Home Assistant does not add cards to an
 existing dashboard on its own, so you still choose where each card belongs.
@@ -144,6 +148,12 @@ see the earlier card design.
 
 You can also add the cards directly in dashboard YAML. Replace the example
 entity ID with your station's **availability binary sensor**:
+
+```yaml
+type: custom:charge-station-map-chips-card
+entity: binary_sensor.my_station_availability
+show_power: true
+```
 
 ```yaml
 type: custom:charge-station-map-compact-card
@@ -204,10 +214,10 @@ core.
 
 The integration manifest points to
 [isertkaya/Charge-Station-Map](https://github.com/isertkaya/Charge-Station-Map)
-for documentation and issue reports. Make the repository public, add a short
-GitHub description and relevant topics, and enable Issues. Push the files and
-check that the Tests, HACS validation and Home Assistant validation workflows
-pass. Then create a GitHub release for version `3.9.0`. The GPL-3.0 license
+for documentation and issue reports. Before submitting the project to the
+public HACS catalog, check that the Tests, HACS validation and Home Assistant
+validation workflows pass, then create a GitHub release for version `3.10.0`.
+The GPL-3.0 license
 and the origin notice below must remain with the published source.
 
 ## Origin and license
