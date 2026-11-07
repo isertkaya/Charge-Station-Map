@@ -140,7 +140,6 @@ const STYLE = `
   .point-name { font-weight: 700; font-size: .91rem; overflow-wrap: anywhere; }
   .point-id { color: var(--csm-muted); font-size: .72rem; overflow-wrap: anywhere; }
   .point-meta { margin-top: 4px; color: var(--csm-muted); font-size: .78rem; overflow-wrap: anywhere; }
-  .point-title { display: flex; align-items: center; flex-wrap: wrap; gap: 5px 9px; }
   .power-badge { display: inline-flex; align-items: baseline; gap: 3px; padding: 3px 7px; border-radius: 9px; color: var(--primary-text-color); background: color-mix(in srgb, var(--primary-color, #03a9f4) 15%, var(--card-background-color, #fff)); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .power-badge strong { font-size: .9rem; font-weight: 750; line-height: 1; }
   .power-badge small { font-size: .67rem; font-weight: 700; }
@@ -149,12 +148,16 @@ const STYLE = `
   .age, .exact-time { color: var(--csm-muted); font-size: .74rem; }
   .empty { margin-top: 12px; color: var(--csm-muted); font-size: .85rem; }
   .compact .point { border-radius: 14px; background: var(--secondary-background-color, rgba(127,127,127,.08)); }
-  .compact .point-action { display: flex; gap: 9px; align-items: center; justify-content: space-between; padding: 9px 11px; background: transparent; }
+  .compact .point-action { display: grid; grid-template-columns: auto minmax(0, 1fr) 72px; gap: 10px; align-items: center; padding: 10px 12px; background: transparent; }
+  .compact .point-action.no-power { grid-template-columns: auto minmax(0, 1fr); }
   .compact .point-main { min-width: 0; }
-  .compact .point-side { flex: none; text-align: right; max-width: 42%; }
-  .compact .point-status { white-space: normal; justify-content: flex-end; }
+  .compact .point-side { align-self: stretch; display: flex; align-items: center; justify-content: flex-end; padding-left: 10px; border-left: 1px solid var(--divider-color, rgba(127,127,127,.2)); }
+  .compact .status-line { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 9px; margin-top: 5px; }
+  .compact .point-status { font-size: .75rem; }
   .compact .point-meta { overflow-wrap: anywhere; }
-  .compact .age { margin-top: 3px; }
+  .compact .power-metric { display: inline-flex; align-items: baseline; gap: 3px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .compact .power-metric strong { font-size: 1.25rem; line-height: 1; font-weight: 750; }
+  .compact .power-metric small { color: var(--csm-muted); font-size: .69rem; font-weight: 700; }
   .detail .body { padding: 22px; }
   .detail .operator { font-size: 1.3rem; }
   .detail .gauge { width: 86px; height: 86px; display: grid; place-items: center; border-radius: 50%; background: conic-gradient(var(--csm-free) var(--free-ratio, 0%), var(--divider-color, #ddd) 0); }
@@ -291,6 +294,15 @@ function powerBadge(power, locale) {
   badge.setAttribute("aria-label", `${formatted} kW`);
   badge.append(element("strong", "", formatted), element("small", "", "kW"));
   return badge;
+}
+
+function powerMetric(power, locale) {
+  if (typeof power !== "number" || !Number.isFinite(power)) return null;
+  const metric = element("span", "power-metric");
+  const formatted = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(power);
+  metric.setAttribute("aria-label", `${formatted} kW`);
+  metric.append(element("strong", "", formatted), element("small", "", "kW"));
+  return metric;
 }
 
 function connectorsOf(point) {
@@ -610,22 +622,24 @@ class ChargeStationMapCard extends HTMLElement {
           icons.append(plugBubble(entry));
         }
         const main = element("div", "point-main");
-        const titleLine = element("div", "point-title");
-        titleLine.append(element("span", "point-name", shortId));
-        if (visible(this._config, "show_power")) {
-          const badge = powerBadge(maxPower, locale);
-          if (badge) titleLine.append(badge);
-        }
-        main.append(titleLine);
+        main.append(element("div", "point-name", shortId));
         if (this._config.plug_style !== "icon_only") {
           main.append(element("div", "point-meta", plugNames(point, strings)));
         }
-        const side = element("div", "point-side");
-        side.append(statusNode);
+        const statusLine = element("div", "status-line");
+        statusLine.append(statusNode);
         if (visible(this._config, "show_status_time")) {
-          side.append(element("div", "age", time ? (relative || `${strings.since} ${time}`) : strings.noTime));
+          statusLine.append(element("span", "age", time ? (relative || `${strings.since} ${time}`) : strings.noTime));
         }
-        action.append(icons, main, side);
+        main.append(statusLine);
+        const side = element("div", "point-side");
+        if (visible(this._config, "show_power")) {
+          const metric = powerMetric(maxPower, locale);
+          if (metric) side.append(metric);
+        }
+        action.append(icons, main);
+        if (side.children.length) action.append(side);
+        else action.className += " no-power";
       }
       row.append(action);
       list.append(row);

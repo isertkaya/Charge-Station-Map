@@ -107,7 +107,8 @@ Kompakt**, and **Charge Station Map · Details**. All three find and show **all*
 charge points of the selected station automatically, including points added
 later. Chips uses a compact, responsive grid of tappable point tiles with plug
 icons, prominent maximum power, status and time in that status. Kompakt shows
-one short row per point plus a status strip. Details uses a free-point gauge
+one row per point with a separate power column and a status strip. Details uses
+a free-point gauge
 and shows every connector's plug type, individual power and cable information,
 plus the full EVSE ID and exact status time. Tap the station or a charge point
 to open its Home Assistant details; the status strip is also tappable. Status
@@ -216,7 +217,7 @@ The integration manifest points to
 [isertkaya/Charge-Station-Map](https://github.com/isertkaya/Charge-Station-Map)
 for documentation and issue reports. Before submitting the project to the
 public HACS catalog, check that the Tests, HACS validation and Home Assistant
-validation workflows pass, then create a GitHub release for version `3.10.0`.
+validation workflows pass, then create a GitHub release for version `3.10.1`.
 The GPL-3.0 license
 and the origin notice below must remain with the published source.
 

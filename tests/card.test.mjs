@@ -182,7 +182,8 @@ test("all cards find renamed point entities on the selected station only", () =>
     const icons = findTags(card.shadowRoot.body, "ha-icon").map((icon) => icon.attributes.icon);
     assert.ok(icons.includes("mdi:ev-plug-type2"));
     assert.ok(icons.includes("mdi:ev-plug-ccs2"));
-    assert.ok(findAll(card.shadowRoot.body, "power-badge").length >= 2);
+    const powerClass = type.includes("compact") ? "power-metric" : "power-badge";
+    assert.ok(findAll(card.shadowRoot.body, powerClass).length >= 2);
     assert.doesNotMatch(rendered, /EP000001|Blockiert/);
     if (type.includes("detail")) {
       assert.match(rendered, /Quettinger Str\. 106/);
@@ -246,7 +247,7 @@ test("chips card shows each point as a clickable tile and can show the status st
   assert.equal(findAll(card.shadowRoot.body, "power-badge").length, 0);
 });
 
-test("power badge and accessible label format fractional kW for the Home Assistant language", () => {
+test("compact power metric and accessible label format fractional kW for the Home Assistant language", () => {
   const hass = hassFixture();
   const point = hass.states["sensor.custom_point_name_1"];
   point.attributes.maxPowerInKw = [11.5];
@@ -255,8 +256,11 @@ test("power badge and accessible label format fractional kW for the Home Assista
   const card = new Card();
   card.setConfig({ entity: "binary_sensor.station_renamed" });
   card.hass = hass;
-  assert.equal(findAll(card.shadowRoot.body, "power-badge")[0].attributes["aria-label"], "11,5 kW");
+  assert.equal(findAll(card.shadowRoot.body, "power-metric")[0].attributes["aria-label"], "11,5 kW");
   assert.match(findAll(card.shadowRoot.body, "point-action")[0].attributes["aria-label"], /Maximale Ladeleistung: 11,5 kW/);
+  card.setConfig({ entity: "binary_sensor.station_renamed", show_power: false });
+  assert.equal(findAll(card.shadowRoot.body, "power-metric").length, 0);
+  assert.match(textOf(card.shadowRoot.body), /Verfügbar/);
 });
 
 test("display options and Home Assistant tap action are respected", () => {
