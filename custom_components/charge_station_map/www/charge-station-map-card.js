@@ -26,7 +26,10 @@ const TEXT = {
     cable: "Kabel vorhanden",
     noCable: "Kein Kabel",
     editor: {
-      settings: "Anzeige und Aktionen",
+      display: "Darstellung",
+      interaction: "Interaktion",
+      stationHelp: "Wähle den Verfügbarkeitssensor der Ladestation.",
+      powerHelp: "Zeigt die maximale Leistung je Ladepunkt beziehungsweise Anschluss.",
       title: "Überschrift",
       address: "Adresse anzeigen",
       strip: "Statusstreifen anzeigen",
@@ -37,10 +40,6 @@ const TEXT = {
       iconText: "Icon und Name",
       iconOnly: "Nur Icon",
       tap: "Beim Tippen",
-      moreInfo: "Home-Assistant-Details öffnen",
-      noAction: "Keine Aktion",
-      navigate: "Dashboard-Seite öffnen",
-      path: "Dashboard-Pfad",
     },
     statuses: {
       AVAILABLE: "Verfügbar",
@@ -71,7 +70,10 @@ const TEXT = {
     cable: "Cable attached",
     noCable: "No cable",
     editor: {
-      settings: "Display and actions",
+      display: "Appearance",
+      interaction: "Interaction",
+      stationHelp: "Choose the station availability sensor.",
+      powerHelp: "Shows maximum power for each charge point or connector.",
       title: "Heading",
       address: "Show address",
       strip: "Show status strip",
@@ -82,10 +84,6 @@ const TEXT = {
       iconText: "Icon and name",
       iconOnly: "Icon only",
       tap: "On tap",
-      moreInfo: "Open Home Assistant details",
-      noAction: "No action",
-      navigate: "Open dashboard page",
-      path: "Dashboard path",
     },
     statuses: {
       AVAILABLE: "Available",
@@ -374,10 +372,20 @@ class ChargeStationMapCard extends HTMLElement {
   }
 
   static getConfigElement() {
+    if (!customElements.get("ha-form")) return undefined;
     const editor = document.createElement("charge-station-map-card-editor");
     editor.detailed = this === ChargeStationMapDetailCard;
     editor.chips = this === ChargeStationMapChipsCard;
     return editor;
+  }
+
+  static getConfigForm() {
+    const strings = TEXT[typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("de") ? "de" : "en"];
+    return {
+      schema: editorSchema(strings, undefined, this === ChargeStationMapDetailCard, this === ChargeStationMapChipsCard),
+      computeLabel: (field) => editorLabel(strings, field),
+      computeHelper: (field) => editorHelper(strings, field),
+    };
   }
 
   setConfig(config) {
@@ -660,15 +668,86 @@ class ChargeStationMapChipsCard extends ChargeStationMapCard {
   _chips = true;
 }
 
+function editorSchema(strings, stationIds, detailed, chips) {
+  const toggle = (name, defaultValue = true) => ({
+    name, selector: { boolean: {} }, description: { suggested_value: defaultValue },
+  });
+  const displayFields = [
+    toggle("show_address"), toggle("show_status_strip", !chips),
+    toggle("show_power"), toggle("show_status_time"),
+  ];
+  if (detailed) displayFields.push(toggle("show_cable"));
+  return [
+    {
+      name: "entity",
+      required: true,
+      selector: { entity: stationIds
+        ? { include_entities: stationIds, filter: { domain: "binary_sensor" } }
+        : { filter: { integration: "charge_station_map", domain: "binary_sensor" } } },
+    },
+    { name: "title", selector: { text: {} } },
+    {
+      type: "expandable", name: "appearance", flatten: true,
+      title: strings.editor.display, expanded: true,
+      schema: [
+        { type: "grid", name: "", flatten: true, column_min_width: "180px", schema: displayFields },
+        {
+          name: "plug_style",
+          selector: { select: { mode: "list", options: [
+            { value: "icon_text", label: strings.editor.iconText },
+            { value: "icon_only", label: strings.editor.iconOnly },
+          ] } },
+          description: { suggested_value: "icon_text" },
+        },
+      ],
+    },
+    {
+      type: "expandable", name: "interaction", flatten: true,
+      title: strings.editor.interaction,
+      schema: [
+        { name: "tap_action", selector: { ui_action: {
+          actions: ["more-info", "navigate", "url", "perform-action", "assist", "none"],
+          default_action: "more-info",
+        } } },
+      ],
+    },
+  ];
+}
+
+function editorLabel(strings, field) {
+  const labels = {
+    entity: strings.selectStation,
+    title: strings.editor.title,
+    show_address: strings.editor.address,
+    show_status_strip: strings.editor.strip,
+    show_power: strings.editor.power,
+    show_status_time: strings.editor.time,
+    show_cable: strings.editor.cable,
+    plug_style: strings.editor.plugStyle,
+    tap_action: strings.editor.tap,
+  };
+  return labels[field.name] || field.title || field.name;
+}
+
+function editorHelper(strings, field) {
+  if (field.name === "entity") return strings.editor.stationHelp;
+  if (field.name === "show_power") return strings.editor.powerHelp;
+  return undefined;
+}
+
 class ChargeStationMapCardEditor extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
+    this.shadowRoot.innerHTML = `<style>:host { display: block; } ha-form { display: block; }</style>`;
+    this._form = document.createElement("ha-form");
+    this._form.narrow = true;
+    this._form.addEventListener("value-changed", (event) => this._formChanged(event));
+    this.shadowRoot.append(this._form);
   }
 
   setConfig(config) {
     this._config = { ...config };
-    this._signature = undefined;
     this._render();
   }
 
@@ -677,8 +756,32 @@ class ChargeStationMapCardEditor extends HTMLElement {
     this._render();
   }
 
-  _changed(patch) {
-    this._config = { ...this._config, ...patch };
+  _formData() {
+    const data = {
+      ...this._config,
+      title: typeof this._config.title === "string" ? this._config.title : "",
+      show_address: visible(this._config, "show_address"),
+      show_status_strip: showStatusStrip(this._config, this.chips),
+      show_power: visible(this._config, "show_power"),
+      show_status_time: visible(this._config, "show_status_time"),
+      show_cable: visible(this._config, "show_cable"),
+      plug_style: this._config.plug_style || "icon_text",
+      tap_action: this._config.tap_action || { action: "more-info" },
+    };
+    if (!this.detailed) delete data.show_cable;
+    return data;
+  }
+
+  _formChanged(event) {
+    event.stopPropagation?.();
+    if (!event.detail?.value) return;
+    const config = { ...this._config };
+    for (const key of [
+      "entity", "title", "show_address", "show_status_strip", "show_power",
+      "show_status_time", "show_cable", "plug_style", "tap_action",
+    ]) delete config[key];
+    this._config = { ...config, ...event.detail.value };
+    this._form.data = this._formData();
     this.dispatchEvent(new CustomEvent("config-changed", {
       detail: { config: this._config },
       bubbles: true,
@@ -689,133 +792,19 @@ class ChargeStationMapCardEditor extends HTMLElement {
   _render() {
     if (!this._hass || !this._config) return;
     const strings = TEXT[language(this._hass)];
-    const options = stations(this._hass);
-    const signature = JSON.stringify([
-      this._config.entity,
-      language(this._hass),
-      this._config.title,
-      this._config.show_address,
-      this._config.show_status_strip,
-      this._config.show_power,
-      this._config.show_status_time,
-      this._config.show_cable,
-      this._config.plug_style,
-      this._config.tap_action,
-      options.map((station) => [station.entity_id, station.attributes.operator, station.attributes.address]),
-    ]);
-    if (signature === this._signature) return;
-    this._signature = signature;
-    this.shadowRoot.innerHTML = `<style>
-      label { display: block; margin: 12px 0 6px; color: var(--primary-text-color); }
-      select, input[type="text"] { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px;
-        color: var(--primary-text-color); background: var(--card-background-color);
-        border: 1px solid var(--divider-color); }
-      details { margin-top: 18px; color: var(--primary-text-color); }
-      summary { cursor: pointer; font-weight: 600; }
-      .check { display: flex; align-items: center; gap: 10px; }
-      .check input { margin: 0; accent-color: var(--primary-color); }
-    </style>`;
-    const label = element("label", "", strings.selectStation);
-    const select = element("select");
-    select.append(element("option", "", "—"));
-    select.firstChild.value = "";
-    for (const station of options) {
-      const option = element("option", "", `${station.attributes.operator || strings.operator} · ${station.attributes.address || station.attributes.stationid}`);
-      option.value = station.entity_id;
-      select.append(option);
+    const stationIds = stations(this._hass).map((station) => station.entity_id);
+    if (this._config.entity && !stationIds.includes(this._config.entity)) {
+      stationIds.push(this._config.entity);
     }
-    if (this._config.entity && !options.some((station) => station.entity_id === this._config.entity)) {
-      const option = element("option", "", this._config.entity);
-      option.value = this._config.entity;
-      select.append(option);
+    const signature = JSON.stringify([language(this._hass), stationIds, this.detailed, this.chips]);
+    if (signature !== this._schemaSignature) {
+      this._schemaSignature = signature;
+      this._form.schema = editorSchema(strings, stationIds, this.detailed, this.chips);
+      this._form.computeLabel = (field) => editorLabel(strings, field);
+      this._form.computeHelper = (field) => editorHelper(strings, field);
     }
-    select.value = this._config.entity || "";
-    select.addEventListener("change", () => this._changed({ entity: select.value }));
-    label.append(select);
-    this.shadowRoot.append(label);
-
-    const settings = element("details");
-    settings.open = true;
-    settings.append(element("summary", "", strings.editor.settings));
-
-    const titleLabel = element("label", "", strings.editor.title);
-    const titleInput = element("input");
-    titleInput.type = "text";
-    titleInput.value = this._config.title || "";
-    titleInput.addEventListener("change", () => this._changed({ title: titleInput.value }));
-    titleLabel.append(titleInput);
-    settings.append(titleLabel);
-
-    const checks = [
-      ["show_address", strings.editor.address],
-      ["show_status_strip", strings.editor.strip],
-      ["show_power", strings.editor.power],
-      ["show_status_time", strings.editor.time],
-    ];
-    if (this.detailed) checks.push(["show_cable", strings.editor.cable]);
-    for (const [key, caption] of checks) {
-      const checkLabel = element("label", "check", caption);
-      const input = element("input");
-      input.type = "checkbox";
-      input.checked = key === "show_status_strip" && this.chips
-        ? this._config.show_status_strip === true : visible(this._config, key);
-      input.addEventListener("change", () => this._changed({ [key]: input.checked }));
-      checkLabel.prepend(input);
-      settings.append(checkLabel);
-    }
-
-    const plugLabel = element("label", "", strings.editor.plugStyle);
-    const plugSelect = element("select");
-    for (const [value, caption] of [
-      ["icon_text", strings.editor.iconText],
-      ["icon_only", strings.editor.iconOnly],
-    ]) {
-      const option = element("option", "", caption);
-      option.value = value;
-      plugSelect.append(option);
-    }
-    plugSelect.value = this._config.plug_style || "icon_text";
-    plugSelect.addEventListener("change", () => this._changed({ plug_style: plugSelect.value }));
-    plugLabel.append(plugSelect);
-    settings.append(plugLabel);
-
-    const tapLabel = element("label", "", strings.editor.tap);
-    const tapSelect = element("select");
-    const actionOptions = [
-      ["more-info", strings.editor.moreInfo],
-      ["none", strings.editor.noAction],
-      ["navigate", strings.editor.navigate],
-    ];
-    const currentAction = this._config.tap_action?.action || "more-info";
-    if (!actionOptions.some(([value]) => value === currentAction)) {
-      actionOptions.push([currentAction, currentAction]);
-    }
-    for (const [value, caption] of actionOptions) {
-      const option = element("option", "", caption);
-      option.value = value;
-      tapSelect.append(option);
-    }
-    tapSelect.value = currentAction;
-    tapSelect.addEventListener("change", () => {
-      const tapAction = tapSelect.value === "navigate"
-        ? { action: "navigate", navigation_path: this._config.tap_action?.navigation_path || "" }
-        : { action: tapSelect.value };
-      this._changed({ tap_action: tapAction });
-    });
-    tapLabel.append(tapSelect);
-    settings.append(tapLabel);
-    if (currentAction === "navigate") {
-      const pathLabel = element("label", "", strings.editor.path);
-      const pathInput = element("input");
-      pathInput.type = "text";
-      pathInput.value = this._config.tap_action?.navigation_path || "";
-      pathInput.addEventListener("change", () => this._changed({
-        tap_action: { action: "navigate", navigation_path: pathInput.value },
-      }));
-      pathLabel.append(pathInput);
-      settings.append(pathLabel);
-    }
-    this.shadowRoot.append(settings);
+    this._form.hass = this._hass;
+    this._form.data = this._formData();
   }
 }
 
@@ -834,6 +823,7 @@ for (const [type, name] of CARD_TYPES) {
           ? "Schlanke, antippbare Ladepunkt-Kacheln im Mushroom-Stil"
           : "Ladepunktfelder mit allen Anschlüssen und genauen Statuszeiten",
       preview: true,
+      documentationURL: "https://github.com/isertkaya/Charge-Station-Map#dashboard-cards",
       getEntitySuggestion: (hass, entityId) =>
         isStation(hass.states?.[entityId])
           ? { config: { type: `custom:${type}`, entity: entityId } }

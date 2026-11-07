@@ -116,13 +116,17 @@ times come from the API's `updatedAt` field; if the API does not provide one,
 the cards say that the time is unknown.
 
 All cards follow the active Home Assistant theme and use rounded, Mushroom-like
-icon bubbles. In the visual card editor, choose the station and customize the
-heading, address, status strip, power, status time, plug labels and tap action.
+icon bubbles. The visual editor uses Home Assistant's native form controls and
+normally lists only station availability sensors in its entity picker. If the
+form component has not yet loaded, Home Assistant's built-in editor provides an
+integration-filtered entity picker. Appearance and
+interaction settings let you change the heading, address, status strip, power,
+status time, plug labels and tap action without writing YAML.
 The status strip is off by default in Chips to keep it short. The detailed card
 also lets you show or hide cable information. The default tap action opens Home
-Assistant details; the editor also supports no action or
-navigation to a dashboard page. Standard Home Assistant `tap_action` settings
-can be set in YAML.
+Assistant details; the native action editor also supports navigation, URLs,
+actions, Assist and no action. Standard Home Assistant `tap_action` settings can
+be set in YAML.
 
 With the usual Home Assistant dashboard settings, the integration registers
 its card resource automatically. After restarting Home Assistant and reloading
@@ -217,7 +221,7 @@ The integration manifest points to
 [isertkaya/Charge-Station-Map](https://github.com/isertkaya/Charge-Station-Map)
 for documentation and issue reports. Before submitting the project to the
 public HACS catalog, check that the Tests, HACS validation and Home Assistant
-validation workflows pass, then create a GitHub release for version `3.10.1`.
+validation workflows pass, then create a GitHub release for version `3.10.2`.
 The GPL-3.0 license
 and the origin notice below must remain with the published source.
 

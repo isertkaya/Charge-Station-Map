@@ -318,26 +318,97 @@ test("compact and chips cards never hide extra charge points", () => {
   }
 });
 
-test("visual editor exposes card settings and saves a display change", () => {
+test("native editor filters station entities, keeps defaults, and preserves focus across changes", () => {
   const Editor = registered.get("charge-station-map-card-editor");
   const editor = new Editor();
   editor.setConfig({ entity: "binary_sensor.station_renamed" });
   editor.hass = hassFixture();
-  const settings = editor.shadowRoot.children[1];
-  assert.match(textOf(settings), /Anzeige und Aktionen/);
-  assert.match(textOf(settings), /Steckeranzeige/);
-  const addressCheckbox = findTags(settings, "input")[1];
-  addressCheckbox.checked = false;
-  addressCheckbox.change();
+  const form = editor._form;
+  assert.equal(form.tagName, "ha-form");
+  assert.deepEqual(form.schema[0].selector.entity.include_entities, ["binary_sensor.station_renamed"]);
+  assert.equal(form.schema[2].title, "Darstellung");
+  assert.equal(form.schema[2].expanded, true);
+  assert.equal(form.schema[3].title, "Interaktion");
+  assert.equal(form.data.show_address, true);
+  assert.equal(form.data.show_power, true);
+  assert.equal(form.computeLabel({ name: "show_power" }), "Ladeleistung anzeigen");
+  const next = {
+    ...form.data,
+    show_address: false,
+    plug_style: "icon_only",
+    tap_action: { action: "navigate", navigation_path: "/dashboard-ev" },
+  };
+  form.listeners["value-changed"][0]({ detail: { value: next }, stopPropagation() {} });
   assert.equal(editor.events.at(-1).type, "config-changed");
   assert.equal(editor.events.at(-1).detail.config.show_address, false);
-  const [plugSelect, tapSelect] = findTags(settings, "select");
-  plugSelect.value = "icon_only";
-  plugSelect.change();
   assert.equal(editor.events.at(-1).detail.config.plug_style, "icon_only");
-  tapSelect.value = "navigate";
-  tapSelect.change();
   assert.deepEqual(editor.events.at(-1).detail.config.tap_action, {
-    action: "navigate", navigation_path: "",
+    action: "navigate", navigation_path: "/dashboard-ev",
   });
+  editor.setConfig(editor.events.at(-1).detail.config);
+  assert.equal(editor._form, form);
+  assert.equal(form.data.show_address, false);
+  assert.equal(form.data.plug_style, "icon_only");
+});
+
+test("native editor exposes variant-specific controls and card defaults", () => {
+  const Editor = registered.get("charge-station-map-card-editor");
+  const chips = new Editor();
+  chips.chips = true;
+  chips.setConfig({ entity: "binary_sensor.station_renamed" });
+  chips.hass = hassFixture();
+  assert.equal(chips._form.data.show_status_strip, false);
+  const detail = new Editor();
+  detail.detailed = true;
+  detail.setConfig({ entity: "binary_sensor.station_renamed" });
+  detail.hass = hassFixture();
+  assert.equal(detail._form.data.show_status_strip, true);
+  assert.ok(detail._form.schema[2].schema[0].schema.some((field) => field.name === "show_cable"));
+  assert.ok(!chips._form.schema[2].schema[0].schema.some((field) => field.name === "show_cable"));
+});
+
+test("Home Assistant form editor takes over when ha-form has not loaded", () => {
+  const Compact = registered.get("charge-station-map-compact-card");
+  const Detail = registered.get("charge-station-map-detail-card");
+  const Chips = registered.get("charge-station-map-chips-card");
+  assert.equal(Compact.getConfigElement(), undefined);
+  const compactForm = Compact.getConfigForm();
+  assert.deepEqual(compactForm.schema[0].selector.entity.filter, {
+    integration: "charge_station_map", domain: "binary_sensor",
+  });
+  assert.equal(compactForm.schema[2].schema[0].schema[1].description.suggested_value, true);
+  assert.equal(Chips.getConfigForm().schema[2].schema[0].schema[1].description.suggested_value, false);
+  assert.ok(Detail.getConfigForm().schema[2].schema[0].schema.some((field) => field.name === "show_cable"));
+  registered.set("ha-form", FakeNode);
+  assert.equal(Compact.getConfigElement().tagName, "charge-station-map-card-editor");
+  registered.delete("ha-form");
+});
+
+test("each card keeps a useful layout while display options change", () => {
+  const hass = hassFixture();
+  for (const type of ["charge-station-map-compact-card", "charge-station-map-detail-card", "charge-station-map-chips-card"]) {
+    const Card = registered.get(type);
+    const card = new Card();
+    card.hass = hass;
+    card.setConfig({
+      entity: "binary_sensor.station_renamed",
+      show_address: false,
+      show_status_strip: false,
+      show_power: false,
+      show_status_time: false,
+      plug_style: "icon_only",
+    });
+    const reduced = textOf(card.shadowRoot.body);
+    assert.match(reduced, /Wirelane GmbH/);
+    assert.match(reduced, /Verfügbar/);
+    assert.match(reduced, /Belegt/);
+    assert.doesNotMatch(reduced, /Quettinger Str|150 kW|Typ 2|vor\s+|Seit\s+/);
+    assert.equal(findAll(card.shadowRoot.body, "point-action").length, 2);
+    assert.equal(findAll(card.shadowRoot.body, "rail-segment").length, 0);
+    card.setConfig({ entity: "binary_sensor.station_renamed" });
+    const restored = textOf(card.shadowRoot.body);
+    assert.match(restored, /Quettinger Str/);
+    assert.match(restored, /150 kW/);
+    assert.match(restored, /Typ 2/);
+  }
 });
