@@ -2,6 +2,12 @@
 
 Charge Station Map shows nearby charging stations from the EnBW API in Home Assistant. Search by area, filter stations by operator, plug type and power, and monitor each charge point's state in the included dashboard cards.
 
+[![Open Charge Station Map in HACS or the Home Assistant Marketplace](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=isertkaya&repository=Charge-Station-Map&category=integration)
+
+Select your Home Assistant instance, add the repository if prompted, and install
+**Charge Station Map**. The button opens HACS on older Home Assistant versions
+and the Marketplace on Home Assistant 2026.11 or newer.
+
 ## Notice of Non-Affiliation and Disclaimer
 
 We are not affiliated, associated, authorized, endorsed by, or in any way officially connected with EnBW Energie Baden-Württemberg, or any of its subsidiaries or its affiliates. The official EnBW Energie Baden-Württemberg website can be found at [https://www.enbw.com/](https://www.enbw.com/). The map to find nearby charge stations can be found [here](https://www.enbw.com/elektromobilitaet/unterwegs-laden#ladestations-finder)
@@ -65,6 +71,8 @@ Follow any restart prompt shown after installation or an update. Then open
 Station Map**. The two dashboard cards are registered automatically when the
 integration is set up.
 
+[![Start setting up Charge Station Map in Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=charge_station_map)
+
 ## Set up a station
 
 1. Obtain an API key from the [EnBW charge station finder](https://www.enbw.com/elektromobilitaet/unterwegs-laden#ladestations-finder). Open your browser's developer tools and network monitor, search for a station and open its details. Find a request such as `https://api.emp.emob-enbw.com/emobility-public-api/api/v1/chargestations/{STATION_NUMBER}` and copy the hexadecimal value of its `Ocp-Apim-Subscription-Key` request header.
@@ -85,6 +93,12 @@ entities from the previous physical station are removed and replaced with the
 new station's EVSE IDs.
 
 ## Dashboard cards
+
+| Compact | Detailed |
+| --- | --- |
+| ![Charge Station Map compact card with three example charge points](docs/images/compact-card.png) | ![Charge Station Map detailed card with three example charge points](docs/images/detail-card.png) |
+
+These previews use example station data and the Home Assistant dark theme.
 
 The integration includes **Charge Station Map · Kompakt** and **Charge Station
 Map · Details**. Both cards find and show **all** charge points of the selected
