@@ -46,45 +46,36 @@ own device with its own set of entities. When a shared API key is renewed throug
 re-authentication, all stations using the old key receive the new key.
 
 
-## Setup
+## Install with HACS or Marketplace
 
-1. Copy `custom_components/charge_station_map` to
-   `<Home Assistant config>/custom_components/charge_station_map`.
-2. Restart Home Assistant.
-3. Acquire an API key (this can be done using the developer tools of your browser).
+This project is a custom integration repository. Add its URL once; HACS or the
+Home Assistant Marketplace then installs and updates it. No file copying is
+needed.
 
-    * Open the [charge station finder](https://www.enbw.com/elektromobilitaet/unterwegs-laden#ladestations-finder) to find nearby charge stations.
-    * Open the development tools and network monitor of your browser
-        * Firefox Network Monitor — [Firefox Source Docs documentation](https://firefox-source-docs.mozilla.org/devtools-user/network_monitor/)
-        * Chrome Network features reference - [Chrome Developers](https://developer.chrome.com/docs/devtools/network/reference/)
-    * Search for a charge station and open the detail pane
-    * Search in the network requests for a request to the api, looking like this:
-      ```
-      https://api.emp.emob-enbw.com/emobility-public-api/api/v1/chargestations/{STATION_NUMBER}
-      ```
-    * Open the request and search for the API Key in the headers. It is a hexadecimal value and will look like this:
-      ```
-      Ocp-Apim-Subscription-Key: {API_KEY}
-      ```
-4. In **Settings → Devices & Services → Add integration**, search for
-   **Charge Station Map**.
-5. Provide the API key for the first station in this integration. Further
-   stations in Charge Station Map reuse it automatically.
-6. Move the marker on the map to the area you want to search, and set the radius around it. The search expands grouped API results and includes individual stations within that radius.
-7. After the search, optionally select one or more operators and plug types from the values found in the area. A station matches when at least one selected operator and at least one selected plug type match. You can also set a minimum power in kW; it is compared against `maxPowerInKw`.
-8. Select a station from the filtered results. Each option shows operator, power, distance from the search center, and address in that order.
+- **Home Assistant 2026.11 or newer:** Open **Settings → Marketplace → Add from
+  link**, enter `https://github.com/isertkaya/Charge-Station-Map`, and select
+  **Add**. Open **Charge Station Map** in the Marketplace and select **Install**.
+- **Older Home Assistant with HACS:** Open **HACS → ⋮ → Custom repositories**,
+  enter `https://github.com/isertkaya/Charge-Station-Map`, select **Integration**
+  as the category, and add it. Open **Charge Station Map** in HACS and select
+  **Download**.
+
+Follow any restart prompt shown after installation or an update. Then open
+**Settings → Devices & Services → Add integration** and search for **Charge
+Station Map**. The two dashboard cards are registered automatically when the
+integration is set up.
+
+## Set up a station
+
+1. Obtain an API key from the [EnBW charge station finder](https://www.enbw.com/elektromobilitaet/unterwegs-laden#ladestations-finder). Open your browser's developer tools and network monitor, search for a station and open its details. Find a request such as `https://api.emp.emob-enbw.com/emobility-public-api/api/v1/chargestations/{STATION_NUMBER}` and copy the hexadecimal value of its `Ocp-Apim-Subscription-Key` request header.
+2. In the **Charge Station Map** setup form, enter the API key. Further stations reuse it automatically.
+3. Move the marker on the map to the area you want to search and set the radius. The search expands grouped API results and includes individual stations within that radius.
+4. Optionally select one or more operators and plug types from the values found in the area. A station matches when at least one selected operator and at least one selected plug type match. You can also set a minimum power in kW; it is compared against `maxPowerInKw`.
+5. Select a station from the filtered results. Each option shows operator, power, distance from the search center, and address in that order.
 
 New station entries and device names show the operator before the address.
 Existing device names update after the integration reloads, and later API
 changes to the operator or address are reflected automatically.
-
-To install from a public GitHub repository, open **Settings → Marketplace → Add
-from link** in Home Assistant 2026.11 or newer and enter
-`https://github.com/isertkaya/Charge-Station-Map`. On older versions with HACS,
-use **HACS → ⋮ → Custom repositories** and select **Integration**. Install
-Charge Station Map, then restart Home Assistant.
-The dashboard cards are registered automatically after setup. A custom
-repository can be used without waiting for inclusion in the public catalog.
 
 If the station you want does not show up in the results, enlarge the search
 radius or move the marker closer to it. A specific station number can also be
