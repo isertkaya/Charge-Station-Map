@@ -193,6 +193,64 @@ test("all cards find renamed point entities on the selected station only", () =>
   }
 });
 
+test("all cards hide selected charge points across counts, strip and rows", () => {
+  const hass = hassFixture();
+  for (const type of ["charge-station-map-compact-card", "charge-station-map-detail-card", "charge-station-map-chips-card"]) {
+    const Card = registered.get(type);
+    const card = new Card();
+    card.hass = hass;
+    card.setConfig({
+      entity: "binary_sensor.station_renamed",
+      hidden_charge_points: ["DE*WLN*EP001941"],
+      show_status_strip: true,
+    });
+    const rendered = textOf(card.shadowRoot.body);
+    assert.match(rendered, type.includes("detail") ? /0\s+von\s+1/ : /0\s*\/\s*1/);
+    assert.doesNotMatch(rendered, /EP001941|Typ 2|Verfügbar/);
+    assert.match(rendered, /EP001942|Belegt/);
+    assert.equal(findAll(card.shadowRoot.body, "point-action").length, 1);
+    assert.equal(findAll(card.shadowRoot.body, "rail-segment").length, 1);
+    assert.equal(card.getCardSize(), type.includes("detail") ? 7 : type.includes("chips") ? 5 : 4);
+  }
+});
+
+test("all-hidden and newly discovered charge points render predictably", () => {
+  const hass = hassFixture();
+  for (const type of ["charge-station-map-compact-card", "charge-station-map-detail-card", "charge-station-map-chips-card"]) {
+    const Card = registered.get(type);
+    const card = new Card();
+    card.hass = hass;
+    card.setConfig({
+      entity: "binary_sensor.station_renamed",
+      hidden_charge_points: ["DE*WLN*EP001941", "DE*WLN*EP001942"],
+    });
+    assert.match(textOf(card.shadowRoot.body), /Alle Ladepunkte dieser Karte sind ausgeblendet/);
+    assert.equal(findAll(card.shadowRoot.body, "point-action").length, 0);
+    hass.states["sensor.new_point"] = {
+      entity_id: "sensor.new_point", state: "AVAILABLE",
+      attributes: { device_class: "enum", evseId: "DE*WLN*EP001943", connectors: [] },
+    };
+    hass.entities["sensor.new_point"] = { device_id: "station-a" };
+    card.hass = hass;
+    assert.match(textOf(card.shadowRoot.body), /EP001943/);
+    assert.equal(findAll(card.shadowRoot.body, "point-action").length, 1);
+    delete hass.states["sensor.new_point"];
+    delete hass.entities["sensor.new_point"];
+  }
+});
+
+test("fallback entity IDs also hide charge points", () => {
+  const card = new (registered.get("charge-station-map-compact-card"))();
+  card.hass = hassFixture();
+  card.setConfig({
+    entity: "binary_sensor.station_renamed",
+    hidden_charge_points: ["sensor.custom_point_name_2"],
+  });
+  assert.equal(findAll(card.shadowRoot.body, "point-action").length, 1);
+  assert.match(textOf(card.shadowRoot.body), /EP001941/);
+  assert.doesNotMatch(textOf(card.shadowRoot.body), /EP001942/);
+});
+
 test("an unavailable point is shown as missing data, not occupied", () => {
   const hass = hassFixture();
   hass.states["sensor.custom_point_name_2"].state = "unavailable";
@@ -203,6 +261,19 @@ test("an unavailable point is shown as missing data, not occupied", () => {
   const rendered = textOf(card.shadowRoot.body);
   assert.match(rendered, /Keine Daten/);
   assert.doesNotMatch(rendered, /Belegt/);
+});
+
+test("filtered availability stays unknown when the selected point has no data", () => {
+  const hass = hassFixture();
+  hass.states["sensor.custom_point_name_2"].state = "unavailable";
+  const card = new (registered.get("charge-station-map-compact-card"))();
+  card.hass = hass;
+  card.setConfig({
+    entity: "binary_sensor.station_renamed",
+    hidden_charge_points: ["DE*WLN*EP001941"],
+  });
+  assert.match(textOf(card.shadowRoot.body), /—\s*\/\s*1/);
+  assert.match(textOf(card.shadowRoot.body), /Keine Daten/);
 });
 
 test("compact card opens station and point details", () => {
@@ -326,9 +397,14 @@ test("native editor filters station entities, keeps defaults, and preserves focu
   const form = editor._form;
   assert.equal(form.tagName, "ha-form");
   assert.deepEqual(form.schema[0].selector.entity.include_entities, ["binary_sensor.station_renamed"]);
-  assert.equal(form.schema[2].title, "Darstellung");
-  assert.equal(form.schema[2].expanded, true);
-  assert.equal(form.schema[3].title, "Interaktion");
+  assert.equal(form.schema[1].selector.select.multiple, true);
+  assert.deepEqual(form.schema[1].selector.select.options.map((option) => option.value), [
+    "DE*WLN*EP001941", "DE*WLN*EP001942",
+  ]);
+  assert.match(form.schema[1].selector.select.options[1].label, /CCS.*150 kW/);
+  assert.equal(form.schema[3].title, "Darstellung");
+  assert.equal(form.schema[3].expanded, true);
+  assert.equal(form.schema[4].title, "Interaktion");
   assert.equal(form.data.show_address, true);
   assert.equal(form.data.show_power, true);
   assert.equal(form.computeLabel({ name: "show_power" }), "Ladeleistung anzeigen");
@@ -351,6 +427,32 @@ test("native editor filters station entities, keeps defaults, and preserves focu
   assert.equal(form.data.plug_style, "icon_only");
 });
 
+test("editor saves stable point IDs and clears hidden points when changing station", () => {
+  const Editor = registered.get("charge-station-map-card-editor");
+  const editor = new Editor();
+  editor.setConfig({
+    entity: "binary_sensor.station_renamed",
+    hidden_charge_points: ["sensor.custom_point_name_1"],
+  });
+  editor.hass = hassFixture();
+  assert.deepEqual(editor._form.data.hidden_charge_points, ["DE*WLN*EP001941"]);
+  editor._form.listeners["value-changed"][0]({
+    detail: { value: {
+      ...editor._form.data,
+      hidden_charge_points: ["DE*WLN*EP001941", "DE*WLN*EP001942"],
+    } },
+    stopPropagation() {},
+  });
+  assert.deepEqual(editor.events.at(-1).detail.config.hidden_charge_points, [
+    "DE*WLN*EP001941", "DE*WLN*EP001942",
+  ]);
+  editor._form.listeners["value-changed"][0]({
+    detail: { value: { ...editor._form.data, entity: "binary_sensor.other_station" } },
+    stopPropagation() {},
+  });
+  assert.deepEqual(editor.events.at(-1).detail.config.hidden_charge_points, []);
+});
+
 test("native editor exposes variant-specific controls and card defaults", () => {
   const Editor = registered.get("charge-station-map-card-editor");
   const chips = new Editor();
@@ -363,8 +465,8 @@ test("native editor exposes variant-specific controls and card defaults", () => 
   detail.setConfig({ entity: "binary_sensor.station_renamed" });
   detail.hass = hassFixture();
   assert.equal(detail._form.data.show_status_strip, true);
-  assert.ok(detail._form.schema[2].schema[0].schema.some((field) => field.name === "show_cable"));
-  assert.ok(!chips._form.schema[2].schema[0].schema.some((field) => field.name === "show_cable"));
+  assert.ok(detail._form.schema[3].schema[0].schema.some((field) => field.name === "show_cable"));
+  assert.ok(!chips._form.schema[3].schema[0].schema.some((field) => field.name === "show_cable"));
 });
 
 test("Home Assistant form editor takes over when ha-form has not loaded", () => {
@@ -376,9 +478,12 @@ test("Home Assistant form editor takes over when ha-form has not loaded", () => 
   assert.deepEqual(compactForm.schema[0].selector.entity.filter, {
     integration: "charge_station_map", domain: "binary_sensor",
   });
-  assert.equal(compactForm.schema[2].schema[0].schema[1].description.suggested_value, true);
-  assert.equal(Chips.getConfigForm().schema[2].schema[0].schema[1].description.suggested_value, false);
-  assert.ok(Detail.getConfigForm().schema[2].schema[0].schema.some((field) => field.name === "show_cable"));
+  assert.deepEqual(compactForm.schema[1].selector.entity.filter, {
+    integration: "charge_station_map", domain: "sensor", device_class: "enum",
+  });
+  assert.equal(compactForm.schema[3].schema[0].schema[1].description.suggested_value, true);
+  assert.equal(Chips.getConfigForm().schema[3].schema[0].schema[1].description.suggested_value, false);
+  assert.ok(Detail.getConfigForm().schema[3].schema[0].schema.some((field) => field.name === "show_cable"));
   registered.set("ha-form", FakeNode);
   assert.equal(Compact.getConfigElement().tagName, "charge-station-map-card-editor");
   registered.delete("ha-form");

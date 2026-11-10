@@ -104,8 +104,11 @@ These previews use example station data and the Home Assistant dark theme.
 
 The integration includes **Charge Station Map · Chips**, **Charge Station Map ·
 Kompakt**, and **Charge Station Map · Details**. All three find and show **all**
-charge points of the selected station automatically, including points added
-later. Chips uses a compact, responsive grid of tappable point tiles with plug
+charge points of the selected station by default. The card editor lets you
+hide individual charge points by EVSE ID; the choice applies only to that card.
+New points appear automatically. The available/total count, status strip,
+legend and point tiles then reflect the visible points. Chips uses a compact,
+responsive grid of tappable point tiles with plug
 icons, prominent maximum power, status and time in that status. Kompakt shows
 one row per point with a separate power column and a status strip. Details uses
 a free-point gauge
@@ -117,9 +120,10 @@ the cards say that the time is unknown.
 
 All cards follow the active Home Assistant theme and use rounded, Mushroom-like
 icon bubbles. The visual editor uses Home Assistant's native form controls and
-normally lists only station availability sensors in its entity picker. If the
+normally lists only station availability sensors in its entity picker. Directly
+below the station selector, choose the charge points to hide. If the
 form component has not yet loaded, Home Assistant's built-in editor provides an
-integration-filtered entity picker. Appearance and
+integration-filtered entity picker for the station and the point sensors. Appearance and
 interaction settings let you change the heading, address, status strip, power,
 status time, plug labels and tap action without writing YAML.
 The status strip is off by default in Chips to keep it short. The detailed card
@@ -164,6 +168,8 @@ show_power: true
 type: custom:charge-station-map-compact-card
 entity: binary_sensor.my_station_availability
 title: Ladepark am Bahnhof
+hidden_charge_points:
+  - DE*WLN*EP001941
 plug_style: icon_text
 show_power: true
 tap_action:
@@ -221,7 +227,7 @@ The integration manifest points to
 [isertkaya/Charge-Station-Map](https://github.com/isertkaya/Charge-Station-Map)
 for documentation and issue reports. Before submitting the project to the
 public HACS catalog, check that the Tests, HACS validation and Home Assistant
-validation workflows pass, then create a GitHub release for version `3.10.2`.
+validation workflows pass, then create a GitHub release for version `3.10.3`.
 The GPL-3.0 license
 and the origin notice below must remain with the published source.
 

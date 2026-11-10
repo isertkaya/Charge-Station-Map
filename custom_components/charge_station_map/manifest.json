@@ -11,5 +11,5 @@
   "issue_tracker": "https://github.com/isertkaya/Charge-Station-Map/issues",
   "loggers": ["custom_components.charge_station_map"],
   "requirements": [],
-  "version": "3.10.2"
+  "version": "3.10.3"
 }

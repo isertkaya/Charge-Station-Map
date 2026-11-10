@@ -13,6 +13,7 @@ const TEXT = {
     noData: "Keine Daten",
     noTime: "Zeit unbekannt",
     noPoints: "Noch keine Ladepunkte gefunden",
+    noVisiblePoints: "Alle Ladepunkte dieser Karte sind ausgeblendet",
     selectStation: "Ladestation auswählen",
     missingStation: "Die gewählte Ladestation ist nicht vorhanden.",
     closed: "Ladestation derzeit geschlossen",
@@ -29,6 +30,8 @@ const TEXT = {
       display: "Darstellung",
       interaction: "Interaktion",
       stationHelp: "Wähle den Verfügbarkeitssensor der Ladestation.",
+      hiddenPoints: "Ladepunkte ausblenden",
+      hiddenPointsHelp: "Ausgewählte Ladepunkte erscheinen nicht in dieser Karte. Neue Ladepunkte werden automatisch angezeigt.",
       powerHelp: "Zeigt die maximale Leistung je Ladepunkt beziehungsweise Anschluss.",
       title: "Überschrift",
       address: "Adresse anzeigen",
@@ -57,6 +60,7 @@ const TEXT = {
     noData: "No data",
     noTime: "Time unknown",
     noPoints: "No charge points found yet",
+    noVisiblePoints: "All charge points are hidden on this card",
     selectStation: "Select a charge station",
     missingStation: "The selected charge station is missing.",
     closed: "Charge station currently closed",
@@ -73,6 +77,8 @@ const TEXT = {
       display: "Appearance",
       interaction: "Interaction",
       stationHelp: "Choose the station availability sensor.",
+      hiddenPoints: "Hide charge points",
+      hiddenPointsHelp: "Selected charge points are hidden on this card. New charge points appear automatically.",
       powerHelp: "Shows maximum power for each charge point or connector.",
       title: "Heading",
       address: "Show address",
@@ -240,6 +246,17 @@ function pointStates(hass, stationEntityId) {
       hass.entities?.[state.entity_id]?.device_id === deviceId
     )
     .sort((a, b) => String(a.attributes.evseId).localeCompare(String(b.attributes.evseId)));
+}
+
+function hiddenPointIds(config) {
+  return Array.isArray(config?.hidden_charge_points) ? config.hidden_charge_points : [];
+}
+
+function visiblePointStates(hass, config) {
+  const hidden = new Set(hiddenPointIds(config));
+  return pointStates(hass, config?.entity).filter((point) =>
+    !hidden.has(String(point.attributes.evseId)) && !hidden.has(point.entity_id)
+  );
 }
 
 function relativeTime(value, locale, now = Date.now()) {
@@ -411,7 +428,7 @@ class ChargeStationMapCard extends HTMLElement {
   getCardSize() {
     const height = this.shadowRoot.querySelector("ha-card")?.getBoundingClientRect?.().height;
     if (height > 0) return Math.ceil(height / 50);
-    const points = pointStates(this._hass, this._config?.entity).length;
+    const points = visiblePointStates(this._hass, this._config).length;
     if (this._detailed) return 4 + points * 3;
     if (this._chips) return 3 + Math.ceil(points / 2) * 2;
     return 3 + points;
@@ -440,7 +457,8 @@ class ChargeStationMapCard extends HTMLElement {
     const strings = TEXT[language(hass)];
     const locale = hass.locale?.language || hass.language || "en";
     const station = hass.states?.[this._config.entity];
-    const points = pointStates(hass, this._config.entity);
+    const allPoints = pointStates(hass, this._config.entity);
+    const points = visiblePointStates(hass, this._config);
     const deviceId = hass.entities?.[this._config.entity]?.device_id;
     const device = hass.devices?.[deviceId];
     const signature = JSON.stringify([
@@ -490,14 +508,20 @@ class ChargeStationMapCard extends HTMLElement {
     brand.append(stationBubble, brandCopy);
     headerAction.append(brand);
 
-    const available = online ? count(attrs.availableChargePoints) : "—";
-    const total = online ? count(attrs.totalChargePoints) : "—";
+    const filtered = points.length !== allPoints.length;
+    const missingPointStatus = points.some((point) =>
+      point.state === "unknown" || point.state === "unavailable"
+    );
+    const available = online && !(filtered && missingPointStatus) ? count(filtered
+      ? points.filter((point) => point.state === "AVAILABLE").length
+      : attrs.availableChargePoints) : "—";
+    const total = online ? count(filtered ? points.length : attrs.totalChargePoints) : "—";
     const hero = element("div", "hero");
     hero.append(headerAction);
     if (this._detailed) {
       const gauge = element("div", "gauge");
-      const freeCount = Number(attrs.availableChargePoints);
-      const totalCount = Number(attrs.totalChargePoints);
+      const freeCount = Number(available);
+      const totalCount = Number(total);
       const ratio = online && Number.isFinite(freeCount) && Number.isFinite(totalCount) && totalCount > 0
         ? Math.max(0, Math.min(100, (freeCount / totalCount) * 100)) : 0;
       gauge.style.setProperty("--free-ratio", `${ratio}%`);
@@ -553,7 +577,7 @@ class ChargeStationMapCard extends HTMLElement {
     }
 
     const list = element("div", "point-grid");
-    if (points.length === 0) list.append(element("div", "empty", strings.noPoints));
+    if (points.length === 0) list.append(element("div", "empty", filtered ? strings.noVisiblePoints : strings.noPoints));
     points.forEach((point) => {
       const id = String(point.attributes.evseId);
       const shortId = id.split("*").at(-1);
@@ -668,7 +692,7 @@ class ChargeStationMapChipsCard extends ChargeStationMapCard {
   _chips = true;
 }
 
-function editorSchema(strings, stationIds, detailed, chips) {
+function editorSchema(strings, stationIds, detailed, chips, pointOptions) {
   const toggle = (name, defaultValue = true) => ({
     name, selector: { boolean: {} }, description: { suggested_value: defaultValue },
   });
@@ -684,6 +708,14 @@ function editorSchema(strings, stationIds, detailed, chips) {
       selector: { entity: stationIds
         ? { include_entities: stationIds, filter: { domain: "binary_sensor" } }
         : { filter: { integration: "charge_station_map", domain: "binary_sensor" } } },
+    },
+    {
+      name: "hidden_charge_points",
+      selector: pointOptions
+        ? { select: { multiple: true, mode: "list", options: pointOptions } }
+        : { entity: { multiple: true, filter: {
+          integration: "charge_station_map", domain: "sensor", device_class: "enum",
+        } } },
     },
     { name: "title", selector: { text: {} } },
     {
@@ -717,6 +749,7 @@ function editorSchema(strings, stationIds, detailed, chips) {
 function editorLabel(strings, field) {
   const labels = {
     entity: strings.selectStation,
+    hidden_charge_points: strings.editor.hiddenPoints,
     title: strings.editor.title,
     show_address: strings.editor.address,
     show_status_strip: strings.editor.strip,
@@ -731,6 +764,7 @@ function editorLabel(strings, field) {
 
 function editorHelper(strings, field) {
   if (field.name === "entity") return strings.editor.stationHelp;
+  if (field.name === "hidden_charge_points") return strings.editor.hiddenPointsHelp;
   if (field.name === "show_power") return strings.editor.powerHelp;
   return undefined;
 }
@@ -757,8 +791,12 @@ class ChargeStationMapCardEditor extends HTMLElement {
   }
 
   _formData() {
+    const points = pointStates(this._hass, this._config?.entity);
     const data = {
       ...this._config,
+      hidden_charge_points: hiddenPointIds(this._config).map((id) =>
+        String(points.find((point) => point.entity_id === id)?.attributes.evseId || id)
+      ),
       title: typeof this._config.title === "string" ? this._config.title : "",
       show_address: visible(this._config, "show_address"),
       show_status_strip: showStatusStrip(this._config, this.chips),
@@ -775,13 +813,15 @@ class ChargeStationMapCardEditor extends HTMLElement {
   _formChanged(event) {
     event.stopPropagation?.();
     if (!event.detail?.value) return;
+    const previousEntity = this._config.entity;
     const config = { ...this._config };
     for (const key of [
       "entity", "title", "show_address", "show_status_strip", "show_power",
-      "show_status_time", "show_cable", "plug_style", "tap_action",
+      "show_status_time", "show_cable", "plug_style", "tap_action", "hidden_charge_points",
     ]) delete config[key];
     this._config = { ...config, ...event.detail.value };
-    this._form.data = this._formData();
+    if (this._config.entity !== previousEntity) this._config.hidden_charge_points = [];
+    this._render();
     this.dispatchEvent(new CustomEvent("config-changed", {
       detail: { config: this._config },
       bubbles: true,
@@ -796,10 +836,25 @@ class ChargeStationMapCardEditor extends HTMLElement {
     if (this._config.entity && !stationIds.includes(this._config.entity)) {
       stationIds.push(this._config.entity);
     }
-    const signature = JSON.stringify([language(this._hass), stationIds, this.detailed, this.chips]);
+    const points = pointStates(this._hass, this._config.entity);
+    const locale = this._hass.locale?.language || this._hass.language || "en";
+    const pointOptions = points.map((point) => {
+      const id = String(point.attributes.evseId);
+      const shortId = id.split("*").at(-1);
+      const power = powerValue(point);
+      const powerLabel = power === null ? "" : ` · ${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(power)} kW`;
+      return { value: id, label: `${shortId} · ${plugNames(point, strings)}${powerLabel}` };
+    });
+    for (const id of hiddenPointIds(this._config)) {
+      if (!pointOptions.some((option) => option.value === id) &&
+          !points.some((point) => point.entity_id === id)) {
+        pointOptions.push({ value: id, label: id });
+      }
+    }
+    const signature = JSON.stringify([language(this._hass), stationIds, this.detailed, this.chips, pointOptions]);
     if (signature !== this._schemaSignature) {
       this._schemaSignature = signature;
-      this._form.schema = editorSchema(strings, stationIds, this.detailed, this.chips);
+      this._form.schema = editorSchema(strings, stationIds, this.detailed, this.chips, pointOptions);
       this._form.computeLabel = (field) => editorLabel(strings, field);
       this._form.computeHelper = (field) => editorHelper(strings, field);
     }
