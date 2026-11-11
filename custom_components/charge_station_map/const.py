@@ -1,7 +1,7 @@
 """Constants for the EnBW charge stations component."""
 
 DOMAIN = "charge_station_map"
-CARD_VERSION = "3.10.3"
+CARD_VERSION = "3.10.4"
 
 # Config entry keys
 STATION_NUMBER = "station_number"

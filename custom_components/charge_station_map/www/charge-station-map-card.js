@@ -235,16 +235,41 @@ function stations(hass) {
   });
 }
 
+function legacyPointState(state) {
+  const attrs = state.attributes || {};
+  const names = Array.isArray(attrs.plugTypeName) ? attrs.plugTypeName : [];
+  const powers = Array.isArray(attrs.maxPowerInKw) ? attrs.maxPowerInKw : [];
+  const cables = Array.isArray(attrs.cableAttached) ? attrs.cableAttached : [];
+  const connectors = Array.from({ length: Math.max(names.length, powers.length, cables.length) }, (_, index) => ({
+    plugTypeName: names[index],
+    maxPowerInKw: powers[index],
+    cableAttached: cables[index],
+  }));
+  return {
+    ...state,
+    state: state.state === "unavailable" || state.state === "unknown"
+      ? state.state : (attrs.state || "unknown"),
+    attributes: {
+      ...attrs,
+      connectors,
+      // The old integration records poll time here, not the start of this status.
+      updatedAt: null,
+    },
+    legacyPoint: true,
+  };
+}
+
 function pointStates(hass, stationEntityId) {
   const deviceId = hass?.entities?.[stationEntityId]?.device_id;
   if (!deviceId) return [];
   return Object.values(hass.states || {})
     .filter((state) =>
-      state.entity_id.startsWith("sensor.") &&
       state.attributes?.evseId &&
-      state.attributes?.device_class === "enum" &&
+      ((state.entity_id.startsWith("sensor.") && state.attributes.device_class === "enum") ||
+        (state.entity_id.startsWith("binary_sensor.") && state.attributes.device_class === "occupancy")) &&
       hass.entities?.[state.entity_id]?.device_id === deviceId
     )
+    .map((state) => state.entity_id.startsWith("binary_sensor.") ? legacyPointState(state) : state)
     .sort((a, b) => String(a.attributes.evseId).localeCompare(String(b.attributes.evseId)));
 }
 
@@ -285,7 +310,7 @@ function exactTime(value, locale, timeZone) {
 
 function statusText(hass, state, strings) {
   if (!state || state.state === "unavailable" || state.state === "unknown") return strings.noData;
-  const translated = hass.formatEntityState?.(state);
+  const translated = state.legacyPoint ? null : hass.formatEntityState?.(state);
   if (translated && translated !== state.state) return translated;
   return strings.statuses[state.state] || state.state.replaceAll("_", " ");
 }
@@ -485,8 +510,9 @@ class ChargeStationMapCard extends HTMLElement {
 
     const attrs = station.attributes || {};
     const online = station.state !== "unavailable" && station.state !== "unknown";
-    const deviceParts = (device?.name || "").split(" · ");
-    const operator = attrs.operator || deviceParts[0] || strings.operator;
+    const deviceName = device?.name_by_user || device?.name || "";
+    const deviceParts = deviceName.split(" · ");
+    const operator = attrs.operator || deviceParts[0] || attrs.address || strings.operator;
     const address = attrs.address || deviceParts.slice(1).join(" · ");
     const headerAction = element("button", "header-action");
     headerAction.type = "button";
@@ -502,7 +528,7 @@ class ChargeStationMapCard extends HTMLElement {
     const title = typeof this._config.title === "string" ? this._config.title.trim() : "";
     brandCopy.append(element("div", "eyebrow", title || strings.station));
     brandCopy.append(element("h3", "operator", operator));
-    if (address && visible(this._config, "show_address")) {
+    if (address && address !== operator && visible(this._config, "show_address")) {
       brandCopy.append(element("div", "address", address));
     }
     brand.append(stationBubble, brandCopy);
@@ -707,15 +733,19 @@ function editorSchema(strings, stationIds, detailed, chips, pointOptions) {
       required: true,
       selector: { entity: stationIds
         ? { include_entities: stationIds, filter: { domain: "binary_sensor" } }
-        : { filter: { integration: "charge_station_map", domain: "binary_sensor" } } },
+        : { filter: [
+          { integration: "charge_station_map", domain: "binary_sensor" },
+          { integration: "enbw_chargestations", domain: "binary_sensor", device_class: "presence" },
+        ] } },
     },
     {
       name: "hidden_charge_points",
       selector: pointOptions
         ? { select: { multiple: true, mode: "list", options: pointOptions } }
-        : { entity: { multiple: true, filter: {
-          integration: "charge_station_map", domain: "sensor", device_class: "enum",
-        } } },
+        : { entity: { multiple: true, filter: [
+          { integration: "charge_station_map", domain: "sensor", device_class: "enum" },
+          { integration: "enbw_chargestations", domain: "binary_sensor", device_class: "occupancy" },
+        ] } },
     },
     { name: "title", selector: { text: {} } },
     {

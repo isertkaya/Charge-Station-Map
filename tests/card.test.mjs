@@ -160,6 +160,50 @@ function hassFixture() {
   };
 }
 
+function legacyHassFixture() {
+  const hass = hassFixture();
+  hass.states = {
+    "binary_sensor.legacy_station": {
+      entity_id: "binary_sensor.legacy_station", state: "on",
+      attributes: {
+        device_class: "presence", stationid: "2137426",
+        address: "Quettinger Str. 106", availableChargePoints: 1,
+        totalChargePoints: 2,
+      },
+    },
+    "binary_sensor.legacy_point_1": {
+      entity_id: "binary_sensor.legacy_point_1", state: "off",
+      attributes: {
+        device_class: "occupancy", evseId: "DE*WLN*EP001941",
+        state: "AVAILABLE", plugTypeName: ["Typ 2"], maxPowerInKw: [22],
+        cableAttached: [false], updatedAt: "2026-11-06T10:00:00Z",
+      },
+    },
+    "binary_sensor.legacy_point_2": {
+      entity_id: "binary_sensor.legacy_point_2", state: "on",
+      attributes: {
+        device_class: "occupancy", evseId: "DE*WLN*EP001942",
+        state: "RESERVED", plugTypeName: ["CCS", "CHAdeMO"],
+        maxPowerInKw: [150, 50], cableAttached: [true, false],
+        updatedAt: "2026-11-06T10:00:00Z",
+      },
+    },
+    "binary_sensor.other_legacy_point": {
+      entity_id: "binary_sensor.other_legacy_point", state: "on",
+      attributes: { device_class: "occupancy", evseId: "DE*OTHER*EP000001", state: "BLOCKED" },
+    },
+  };
+  hass.entities = {
+    "binary_sensor.legacy_station": { device_id: "legacy-station-a" },
+    "binary_sensor.legacy_point_1": { device_id: "legacy-station-a" },
+    "binary_sensor.legacy_point_2": { device_id: "legacy-station-a" },
+    "binary_sensor.other_legacy_point": { device_id: "legacy-station-b" },
+  };
+  hass.devices = { "legacy-station-a": { name: "Quettinger Str. 106" } };
+  hass.formatEntityState = () => "Ein";
+  return hass;
+}
+
 test("all cards find renamed point entities on the selected station only", () => {
   const hass = hassFixture();
   for (const type of ["charge-station-map-compact-card", "charge-station-map-detail-card", "charge-station-map-chips-card"]) {
@@ -191,6 +235,46 @@ test("all cards find renamed point entities on the selected station only", () =>
       assert.doesNotMatch(rendered, /Seit 06\.11\.2026/);
     }
   }
+});
+
+test("all cards show the old EnBW device and its exact charge point states", () => {
+  const hass = legacyHassFixture();
+  for (const type of ["charge-station-map-compact-card", "charge-station-map-detail-card", "charge-station-map-chips-card"]) {
+    const Card = registered.get(type);
+    assert.equal(Card.getStubConfig(hass).entity, "binary_sensor.legacy_station");
+    const card = new Card();
+    card.hass = hass;
+    card.setConfig({ entity: "binary_sensor.legacy_station" });
+    const rendered = textOf(card.shadowRoot.body);
+    assert.match(rendered, /Quettinger Str\. 106/);
+    assert.match(rendered, /Verfügbar|Reserviert/);
+    assert.match(rendered, /Verfügbar/);
+    assert.match(rendered, /Reserviert/);
+    assert.match(rendered, /Typ 2|CCS/);
+    assert.match(rendered, /150 kW/);
+    assert.match(rendered, /Zeit unbekannt/);
+    assert.doesNotMatch(rendered, /DE\*OTHER|Blockiert|Seit 06\.11\.2026|Ein/);
+    assert.equal(findAll(card.shadowRoot.body, "point-action").length, 2);
+    const icons = findTags(card.shadowRoot.body, "ha-icon").map((icon) => icon.attributes.icon);
+    assert.ok(icons.includes("mdi:ev-plug-ccs2"));
+    if (type.includes("detail")) {
+      assert.match(rendered, /Kabel vorhanden|Kein Kabel/);
+    }
+  }
+});
+
+test("legacy point visibility uses EVSE IDs and opens the original entity", () => {
+  const hass = legacyHassFixture();
+  const card = new (registered.get("charge-station-map-compact-card"))();
+  card.hass = hass;
+  card.setConfig({
+    entity: "binary_sensor.legacy_station",
+    hidden_charge_points: ["DE*WLN*EP001941"],
+  });
+  assert.equal(findAll(card.shadowRoot.body, "point-action").length, 1);
+  assert.match(textOf(card.shadowRoot.body), /0\s*\/\s*1/);
+  findAll(card.shadowRoot.body, "point-action")[0].click();
+  assert.equal(card.events.at(-1).detail.config.entity, "binary_sensor.legacy_point_2");
 });
 
 test("all cards hide selected charge points across counts, strip and rows", () => {
@@ -453,6 +537,40 @@ test("editor saves stable point IDs and clears hidden points when changing stati
   assert.deepEqual(editor.events.at(-1).detail.config.hidden_charge_points, []);
 });
 
+test("editor offers legacy stations and their charge points", () => {
+  const Editor = registered.get("charge-station-map-card-editor");
+  const editor = new Editor();
+  editor.setConfig({ entity: "binary_sensor.legacy_station" });
+  editor.hass = legacyHassFixture();
+  assert.deepEqual(editor._form.schema[0].selector.entity.include_entities, ["binary_sensor.legacy_station"]);
+  assert.deepEqual(editor._form.schema[1].selector.select.options.map((option) => option.value), [
+    "DE*WLN*EP001941", "DE*WLN*EP001942",
+  ]);
+  assert.match(editor._form.schema[1].selector.select.options[1].label, /CCS.*150 kW/);
+});
+
+test("editor lists old and new installations together without mixing points", () => {
+  const hass = hassFixture();
+  const legacy = legacyHassFixture();
+  Object.assign(hass.states, legacy.states);
+  Object.assign(hass.entities, legacy.entities);
+  Object.assign(hass.devices, legacy.devices);
+  const Editor = registered.get("charge-station-map-card-editor");
+  const editor = new Editor();
+  editor.setConfig({ entity: "binary_sensor.legacy_station" });
+  editor.hass = hass;
+  assert.deepEqual(new Set(editor._form.schema[0].selector.entity.include_entities), new Set([
+    "binary_sensor.station_renamed", "binary_sensor.legacy_station",
+  ]));
+  assert.equal(editor._form.schema[1].selector.select.options.length, 2);
+  const card = new (registered.get("charge-station-map-compact-card"))();
+  card.hass = hass;
+  card.setConfig({ entity: "binary_sensor.legacy_station" });
+  assert.equal(findAll(card.shadowRoot.body, "point-action").length, 2);
+  findAll(card.shadowRoot.body, "point-action")[0].click();
+  assert.equal(card.events.at(-1).detail.config.entity, "binary_sensor.legacy_point_1");
+});
+
 test("native editor exposes variant-specific controls and card defaults", () => {
   const Editor = registered.get("charge-station-map-card-editor");
   const chips = new Editor();
@@ -475,12 +593,14 @@ test("Home Assistant form editor takes over when ha-form has not loaded", () => 
   const Chips = registered.get("charge-station-map-chips-card");
   assert.equal(Compact.getConfigElement(), undefined);
   const compactForm = Compact.getConfigForm();
-  assert.deepEqual(compactForm.schema[0].selector.entity.filter, {
-    integration: "charge_station_map", domain: "binary_sensor",
-  });
-  assert.deepEqual(compactForm.schema[1].selector.entity.filter, {
-    integration: "charge_station_map", domain: "sensor", device_class: "enum",
-  });
+  assert.deepEqual(compactForm.schema[0].selector.entity.filter, [
+    { integration: "charge_station_map", domain: "binary_sensor" },
+    { integration: "enbw_chargestations", domain: "binary_sensor", device_class: "presence" },
+  ]);
+  assert.deepEqual(compactForm.schema[1].selector.entity.filter, [
+    { integration: "charge_station_map", domain: "sensor", device_class: "enum" },
+    { integration: "enbw_chargestations", domain: "binary_sensor", device_class: "occupancy" },
+  ]);
   assert.equal(compactForm.schema[3].schema[0].schema[1].description.suggested_value, true);
   assert.equal(Chips.getConfigForm().schema[3].schema[0].schema[1].description.suggested_value, false);
   assert.ok(Detail.getConfigForm().schema[3].schema[0].schema.some((field) => field.name === "show_cable"));

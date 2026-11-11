@@ -118,6 +118,16 @@ to open its Home Assistant details; the status strip is also tappable. Status
 times come from the API's `updatedAt` field; if the API does not provide one,
 the cards say that the time is unknown.
 
+The cards also work with existing devices from the older
+`enbw_chargestations` integration. Select its station availability binary
+sensor in the card editor; its charge-point binary sensors are found through
+the same Home Assistant device. The old integration does not expose the
+operator or the actual time a charge-point state began. For those devices,
+the cards use the device name and show the status time as unknown. If you only
+have the old integration installed, add this card JavaScript as a dashboard
+resource manually as described below; installing the new integration code
+without setting it up does not register the card resource.
+
 All cards follow the active Home Assistant theme and use rounded, Mushroom-like
 icon bubbles. The visual editor uses Home Assistant's native form controls and
 normally lists only station availability sensors in its entity picker. Directly
@@ -151,6 +161,13 @@ lovelace:
     - url: /charge_station_map/charge-station-map-card.js
       type: module
 ```
+
+If you use only the older `enbw_chargestations` integration, download
+[`charge-station-map-card.js`](custom_components/charge_station_map/www/charge-station-map-card.js)
+to Home Assistant's `/config/www/` directory. Then add
+`/local/charge-station-map-card.js` under **Settings → Dashboards → Resources**
+as a JavaScript module. Restart Home Assistant once if the `www` directory is
+new. In YAML resource mode, use that `/local/` URL instead.
 
 After an update from an older version, refresh the browser cache if you still
 see the earlier card design.
@@ -227,7 +244,7 @@ The integration manifest points to
 [isertkaya/Charge-Station-Map](https://github.com/isertkaya/Charge-Station-Map)
 for documentation and issue reports. Before submitting the project to the
 public HACS catalog, check that the Tests, HACS validation and Home Assistant
-validation workflows pass, then create a GitHub release for version `3.10.3`.
+validation workflows pass, then create a GitHub release for version `3.10.4`.
 The GPL-3.0 license
 and the origin notice below must remain with the published source.
 
